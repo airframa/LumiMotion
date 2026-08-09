@@ -32,4 +32,6 @@ submodules/surfel_tracer/*.egg-info/
 # Generic local package/build outputs
 **/*.egg-info/
 **/dist/
-**/.pytest_cache/
+**/.pytest_cache/data/
+outputs*/
+logs/
