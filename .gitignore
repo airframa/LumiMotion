@@ -35,3 +35,5 @@ submodules/surfel_tracer/*.egg-info/
 **/.pytest_cache/data/
 outputs*/
 logs/
+dumps/
+blend_files/

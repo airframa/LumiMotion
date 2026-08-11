@@ -29,7 +29,8 @@ def render_ir(viewpoint_camera, pc: GaussianModel, pipe, bg_color: torch.Tensor,
               detach_scale=False, detach_rot=False, detach_opacity=False, scale_const=None,
               d_rotation_bias=None, depth_filtering=False, raster_settings_override=None, opt=None,
               training=False, relight=False, env_light=None, base_color_scale=None, material_only=False, rot_env_x=None,
-              colmap_transform=False, override_dirs=None, skip_tracer=False):
+              colmap_transform=False, override_dirs=None, skip_tracer=False, dump_light_indirect=False,
+              dump_linear_components=False):
     """
     Render the scene. 
 
@@ -285,7 +286,8 @@ def render_ir(viewpoint_camera, pc: GaussianModel, pipe, bg_color: torch.Tensor,
                                             camera_center=viewpoint_camera.camera_center,
                                             envlight=env_light, xyz=means3D, scales=scales, sh_features=sh_features, rotation=rotations,
                                             opacity=opacity, colmap_transform=colmap_transform,
-                                            override_dirs=None, rot_env_x=None, skip_tracer=False)
+                                            override_dirs=None, rot_env_x=None, skip_tracer=False,
+                                            dump_light_indirect=dump_light_indirect)
     else:
         render_results = rendering_equation_chunk(rendered_base_color.permute(1, 2, 0)[mask],
                                                   rendered_roughness.permute(1, 2, 0)[mask],
@@ -294,7 +296,8 @@ def render_ir(viewpoint_camera, pc: GaussianModel, pipe, bg_color: torch.Tensor,
                                                   camera_center=viewpoint_camera.camera_center,
                                                   envlight=env_light, xyz=means3D, scales=scales, sh_features=sh_features, rotation=rotations,
                                                   opacity=opacity, rot_env_x=rot_env_x, colmap_transform=colmap_transform,
-                                                  override_dirs=override_dirs, skip_tracer=skip_tracer)
+                                                  override_dirs=override_dirs, skip_tracer=skip_tracer,
+                                                  dump_light_indirect=dump_light_indirect)
 
     diffuse = render_results['diffuse']
     specular = render_results['specular']
@@ -397,6 +400,24 @@ def render_ir(viewpoint_camera, pc: GaussianModel, pipe, bg_color: torch.Tensor,
     #         "visibility": visibility,
     #         "light_blocked": light_blocked
     #     })
+
+    # opt-in, additive: raw per-sampled-ray local_incident_lights (P,S,3) plus the
+    # boolean pixel mask needed to place it back on the image grid. Absent unless
+    # dump_light_indirect=True, so default outputs/behaviour are unchanged.
+    if dump_light_indirect and "light_indirect_raw" in render_results:
+        results["light_indirect_raw"] = render_results["light_indirect_raw"]
+        results["light_indirect_raw_mask"] = mask
+
+    # opt-in, additive: the LINEAR-space integrated diffuse/specular images,
+    # before the rgb_to_srgb() encode (which also clips to [0,1]). The existing
+    # "diffuse"/"specular" keys are sRGB-encoded and clipped, so they cannot be
+    # used to recover linear radiance for bright pixels. Needed to split total
+    # radiance into direct vs. indirect contributions by differencing a normal
+    # render against a pipe.wo_indirect one -- diffuse+specular is exactly
+    # linear in incident_lights, so that difference is exact.
+    if dump_linear_components:
+        results["diffuse_linear"] = rendered_diffuse
+        results["specular_linear"] = rendered_specular
 
     return results
 
@@ -552,6 +573,8 @@ def rendering_equation(base_color, roughness, normals, position, viewdirs, pc, p
             "light_indirect": local_incident_lights.mean(dim=1),
             "light_blocked": (trace_alpha * global_incident_lights).mean(dim=1),
         }
+    if kwargs.get("dump_light_indirect", False):
+        results["light_indirect_raw"] = local_incident_lights
     return results
 
 

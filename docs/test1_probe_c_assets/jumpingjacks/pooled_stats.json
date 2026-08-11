@@ -1,0 +1,12 @@
+{
+  "all": {
+    "n": 3000000,
+    "pooled_corr_residual_rotation": 0.2219320081002814,
+    "pooled_corr_relresidual_rotation": 0.004589972393254877
+  },
+  "dynamic": {
+    "n": 645900,
+    "pooled_corr_residual_rotation": -0.007976438633402472,
+    "pooled_corr_relresidual_rotation": -0.02652159499121581
+  }
+}
