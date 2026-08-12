@@ -1,5 +1,16 @@
 # Indirect-illumination fraction of rendered radiance
 
+> ⚠️ **SUPERSEDED IN PART — read the [Correction](#correction-dynamic-mask-channel-bug-corrected-numbers)
+> section at the bottom before using any number from this document.** The
+> "dynamic-region" restriction used throughout the original run thresholded the
+> **wrong channel** of the `dynamic_mask/` PNGs and was effectively a
+> *foreground* restriction (floor + prop included), not a dynamic-only one. The
+> corrected numbers are materially different in the tails — jumpingjacks p99
+> roughly **doubles** (12.6% → 23.7%) — and one qualitative conclusion below
+> ("even the worst-case tail combination stays below the floor", for
+> jumpingjacks) **no longer holds**. The central finding (indirect is a small
+> component; typical implied error is well under the noise floor) survives.
+
 **Question.** Physics says correct diffuse irradiance should change 8–93% under the
 normal rotations present in these scenes (`docs/irradiance_frequency_test.md`), and
 `docs/test1_probe_c_reanalysis.md` confirms a real rotation-dependent error in the
@@ -252,3 +263,210 @@ limitation.
    visible than the scalar number suggests.
 5. `spheres_v5_spec32` still has no trained checkpoint — same gap as every prior
    probe in this investigation.
+
+---
+
+# Correction: dynamic-mask channel bug, corrected numbers
+
+Everything above this line was computed with a **broken dynamic-region
+restriction**. This section reports the bug, its size, and the corrected
+numbers. The corrected numbers are the ones to use.
+
+## The bug
+
+`docs/blend_files_survey.md` §"dynamic_mask RGB and Alpha channels are not the
+same mask" established, by reading the Blender generation script itself, that in
+`dynamic_mask/mask_XXXX.png`:
+
+- **RGB** carries the dynamic/static segmentation (white = mesh driven by the
+  character Armature, black = static floor/props).
+- **Alpha** is just ordinary render alpha of any opaque object — the whole-scene
+  foreground silhouette, carrying no dynamic/static information.
+
+`analyse_probe_d.py`'s `load_dynamic_mask()` thresholded **Alpha**. So every
+result labelled "dynamic-restricted" in this document — and in
+`docs/test1_probe_d_relight.md` — was in fact **foreground-restricted**.
+
+## (1) How much the two channels actually differ — measured
+
+Confirmed directly from the mask files, all 150 frames per scene, at the same
+`>127` threshold the code uses:
+
+| scene | mean px, RGB>127 | mean px, Alpha>127 | area ratio RGB/Alpha | IoU(RGB, Alpha) |
+|---|---|---|---|---|
+| jumpingjacks | 29,675 | 158,225 | 0.187 (min 0.091, max 0.288) | **0.178** (min 0.091, max 0.268) |
+| standup | 40,973 | 179,874 | 0.229 (min 0.037, max 0.414) | **0.222** (min 0.031, max 0.405) |
+
+**The bug is not inconsequential — Alpha selects 4.4–5.3× more pixels than RGB,
+and the two masks overlap at only IoU 0.18–0.22.**
+
+Three further checks pin down the semantics exactly (frame 75, both scenes):
+
+- `R == G == B` **exactly**; both channels are effectively binary (99.3–99.9% of
+  pixels at <5 or >250).
+- **Alpha vs. the beauty render's own alpha channel: IoU = 0.999.** Alpha is,
+  to within antialiasing, literally the same silhouette the analysis already had
+  from `rend_alpha` — intersecting with it was close to a no-op.
+- RGB vs. beauty-render alpha: IoU = 0.166 (jumpingjacks) / 0.247 (standup) —
+  i.e. RGB is a genuinely different, much smaller region: the character alone.
+
+This also retro-explains a remark in the original text above: *"Foreground-only
+(without the dynamic-mask restriction) is within 0.1 percentage point of the
+dynamic-restricted numbers in every condition — the restriction barely matters
+here."* It barely mattered because **it was the same mask**.
+
+(A minor edge effect: 3–5% of RGB>127 pixels fall outside Alpha>127, at
+antialiased silhouette edges where straight-alpha RGB stays saturated while
+alpha falls off. These are removed anyway by the intersection with the eroded
+beauty alpha.)
+
+## (2) The fix
+
+`load_dynamic_mask()` now takes `channel="rgb"` (correct, default) or
+`channel="alpha"` (original buggy behaviour, retained so pre-fix numbers stay
+reproducible), exposed as `--dynamic_mask_channel` on both
+`analyse_probe_d.py` and `measure_indirect_fraction.py`. The docstring records
+the channel semantics and their provenance so this cannot be re-derived wrongly
+from pixel statistics again.
+
+## (3) Corrected indirect-fraction table
+
+Re-ran `measure_indirect_fraction.py` on all four conditions with
+`--dynamic_mask_channel rgb`. Nothing else changed; no frame was dropped for
+insufficient pixels. Old (alpha) vs corrected (rgb), pooled over the restricted
+region across all 150 frames:
+
+| scene / light | mask | px/frame | mean | median | p90 | p99 | max |
+|---|---|---|---|---|---|---|---|
+| jumpingjacks, chapel_day | alpha (old) | 33,434 | 2.79% | 2.11% | 5.17% | 12.62% | 74.6% |
+| jumpingjacks, chapel_day | **rgb (new)** | 4,927 | **4.37%** | **2.86%** | **10.00%** | **23.66%** | 64.6% |
+| jumpingjacks, golden_bay | alpha (old) | 33,434 | 3.38% | 2.67% | 6.04% | 15.23% | 76.9% |
+| jumpingjacks, golden_bay | **rgb (new)** | 4,927 | **4.74%** | **2.68%** | **11.57%** | **29.23%** | 76.9% |
+| standup, chapel_day | alpha (old) | 38,634 | 9.56% | 7.00% | 21.11% | 35.24% | 81.3% |
+| standup, chapel_day | **rgb (new)** | 8,106 | **9.60%** | **4.88%** | **26.26%** | **50.81%** | 92.2% |
+| standup, golden_bay | alpha (old) | 38,634 | 12.03% | 8.01% | 30.34% | 47.05% | 94.1% |
+| standup, golden_bay | **rgb (new)** | 8,106 | **10.18%** | **5.76%** | **26.37%** | **58.29%** | 98.4% |
+
+**Shape of the change.** The restricted region shrinks ~5×, and the
+distribution gets *more extreme at both ends*: medians fall (standup 7.00% →
+4.88%) while p90/p99 rise sharply (jumpingjacks p99 12.6% → 23.7%, standup p99
+35.2% → 50.8%). Means move only modestly and not even consistently in sign
+(jumpingjacks up ~55%, standup chapel flat, standup golden *down* 12.0% →
+10.2%).
+
+The mechanism is visible in the corrected spatial maps: the floor was
+contributing a large mass of *moderate* indirect-fraction pixels that pulled the
+distribution toward its middle. Restricted to the character alone, what remains
+is a bimodal population — exposed body surfaces with very little indirect light,
+plus an intense contact/self-occlusion band where the body meets the floor,
+which is now a much larger *proportion* of a much smaller region.
+
+![corrected map, standup frame 125](indirect_fraction_assets/standup_chapel_day_rgbmask/map_frame0125.png)
+
+Per-frame behaviour with the corrected mask (was: 2.1–3.5% / 5.4–12.6%):
+
+| condition | per-frame mean range | corr(frac, mean\|d_xyz\|) | train / test |
+|---|---|---|---|
+| jumpingjacks, chapel_day | 1.84% – 8.56% | −0.229 | 4.38% / 4.25% |
+| jumpingjacks, golden_bay | 2.27% – 11.49% | −0.150 | 4.69% / 5.24% |
+| standup, chapel_day | 2.91% – 22.28% | −0.077 | 9.82% / 8.46% |
+| standup, golden_bay | 3.33% – 26.66% | +0.132 | 10.18% / 9.87% |
+
+Frame-to-frame variation is substantially wider than before (standup now spans
+2.9%–22.3%), and the conclusion that indirect fraction tracks *pose
+configuration* rather than *deformation magnitude* is unchanged — correlations
+remain small and inconsistent in sign.
+
+## Corrected implied render error — the load-bearing number
+
+Recomputed exactly as in the original §"key derived number" (rotation-dependent
+relative error from `docs/test1_probe_c_reanalysis.md` × indirect fraction),
+only the fraction changed:
+
+**jumpingjacks** (noise floor: chapel_day 2.36%, golden_bay 5.43%)
+
+| rotation | rel. err | mean frac: old → **new** | p90 frac: old → **new** | p99 frac: old → **new** |
+|---|---|---|---|---|
+| median 8.7° | 4.3% | 0.12% → **0.19%** | 0.22% → **0.43%** | 0.55% → **1.02%** |
+| p90 49.6° | 8.8% | 0.25% → **0.38%** | 0.46% → **0.88%** | 1.11% → **2.08%** |
+| p99 91.2° | 13.4% | 0.37% → **0.58%** | 0.69% → **1.34%** | 1.69% → **3.16%** ⚠ |
+
+**standup** (noise floor: chapel_day 5.46%, golden_bay 13.24%)
+
+| rotation | rel. err | mean frac: old → **new** | p90 frac: old → **new** | p99 frac: old → **new** |
+|---|---|---|---|---|
+| median 8.7° | 9.4% | 0.89% → **0.90%** | 1.97% → **2.46%** | 3.30% → **4.75%** |
+| p90 49.6° | 24.3% | 2.32% → **2.33%** | 5.12% → **6.37%** | 8.55% → **12.33%** ⚠ |
+| p99 91.2° | 41.0% | 3.92% → **3.93%** | 8.65% → **10.76%** ⚠ | 14.44% → **20.83%** ⚠ |
+
+(⚠ = exceeds that condition's noise floor. golden_bay columns omitted for
+space; they follow the same pattern, jumpingjacks p99×p99 rising 2.03% → 3.90%
+against a 5.43% floor — still below — and standup p99×p90 11.42% → 14.14%
+against a 13.24% floor — now above.)
+
+### What changes, and what doesn't
+
+**Survives unchanged:** the central finding. Typical implied error — mean
+indirect fraction at the median rotation — is **0.19%** (jumpingjacks) and
+**0.90%** (standup), still 6–12× below the respective noise floors, and still
+well under one 8-bit quantization step for jumpingjacks. Indirect illumination
+is still a small component of these images, and a large relative error inside it
+is still mostly invisible in the render. **The reconciliation of
+`irradiance_frequency_test` / `probe_c_reanalysis` / `probe_d` still holds.**
+
+**Changes, and it is a real change:** one stated conclusion above is now
+**false**. The original text asserted for jumpingjacks that *"even the
+worst-case tail combination stays below the floor"* — with the corrected mask,
+p99-fraction × p99-rotation reaches **3.16% against a 2.36% floor**. jumpingjacks
+therefore moves from the "clean no, it cannot matter" category into the same
+"mostly no, but not dismissible in the tail" category standup was already in.
+The two scenes no longer split qualitatively; they differ only in degree.
+
+**Caveat on the tail numbers, which is now load-bearing rather than academic.**
+The p90/p99-fraction columns multiply two independently-estimated tails and
+assume the pixels with the highest indirect fraction are also the ones fed by
+the most-rotated Gaussians. Those are not established to be the same pixels, so
+these are an upper bound on an upper bound. Both original upper-bound caveats
+also still apply and both push the true value *down*: errors across the 512
+sampled directions partially cancel, and 76–78% of traced hits land on static
+Gaussians carrying no rotation error at all. So "the extreme tail now exceeds
+the noise floor" should be read as *"a worst-case bound has crossed the
+threshold"*, not *"a measured effect exceeds detectability"*.
+
+## Impact on Probes C and D (not re-run, per instruction)
+
+**Probe C — unaffected, with certainty.** `probe_c_transport_residual.py` never
+reads these PNGs. Its dynamic/static split is
+`gaussians.get_binary_feature() > 0.5` (`probe_c_transport_residual.py:182`) —
+LumiMotion's own *learned per-Gaussian* binary separation, in Gaussian space,
+an entirely different mechanism. `reanalyse_probe_c.py` inherits that flag from
+the saved `.npz`. Every Probe C and Probe C re-analysis number stands.
+
+**Probe D — affected; conclusions cannot be assumed to hold, and re-running is
+warranted.** `analyse_probe_d.py` is where the bug lived, so every
+`docs/test1_probe_d_relight.md` result computed with `--dynamic_mask_dir` used a
+pixel population ~5× too large, dominated by the static floor. Specifically:
+
+- The stated purpose of that restriction was *to isolate deforming geometry*
+  (`docs/test1_probe_d.md` Limitations #3, the qualitative panels being
+  "dominated by the background floor pattern and the checkerboard prop"). It did
+  not do that. The floor was never excluded.
+- `docs/test1_probe_d_relight.md` notes the checkerboard prop was *"now inside
+  the dynamic mask for standup (the prop is evidently classified as part of the
+  dynamic Gaussian subset)"*. That inference is **wrong**: the prop was included
+  because the mask was the whole foreground, not because it is armature-driven.
+  It is static, and the corrected mask **does** exclude it — visible in the
+  corrected map above. That specific confound would be genuinely removed by a
+  re-run.
+- The headline Probe D relight numbers (r_lind, deformation correlation, the
+  albedo-confound ratio) are all pixel-population statistics over a region that
+  was ~80% wrong-population. Whether they move a little or a lot is **not
+  determinable without re-running** — and the direction is not guessable, since
+  restricting to the character both removes the floor's large low-deformation
+  pixel mass *and* concentrates on exactly the region where deformation actually
+  occurs.
+
+Given that Probe D's central question is about *deformation*-correlated error,
+and the restriction meant to isolate deforming geometry silently did nothing, a
+re-run with `--dynamic_mask_channel rgb` is the single highest-value follow-up
+here. It was not performed in this pass per instruction.

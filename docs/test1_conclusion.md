@@ -1,3 +1,5 @@
+> **See `lumimotion_campaign_summary.md` for the complete campaign, including Test 2 and the corrected numbers.**
+
 # Test 1 — Conclusion
 
 **Status:** Complete. Question answered.

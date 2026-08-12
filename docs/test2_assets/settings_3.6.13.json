@@ -1,0 +1,427 @@
+{
+  "armature_driven_meshes": [
+    "Ch02_Body",
+    "Ch02_Cloth",
+    "Ch02_Eyelashes",
+    "Ch02_Hair",
+    "Ch02_Sneakers",
+    "Ch02_Socks"
+  ],
+  "blender_version": "3.6.13",
+  "blender_version_tuple": [
+    3,
+    6,
+    13
+  ],
+  "camera": {
+    "angle_x": 0.6911112070083618,
+    "constraint_types": {
+      "TRACK_TO": 61
+    },
+    "lens": 50.0,
+    "location": [
+      0.0,
+      4.0,
+      2.0
+    ],
+    "n_constraints": 61,
+    "parent": "Empty.060",
+    "rotation_euler": [
+      1.1093189716339111,
+      0.0,
+      0.8149281740188599
+    ],
+    "sensor_width": 36.0,
+    "type": "PERSP"
+  },
+  "color_management": {
+    "display_device": "sRGB",
+    "exposure": 0.0,
+    "gamma": 1.0,
+    "look": "None",
+    "sequencer_colorspace": "sRGB",
+    "use_curve_mapping": false,
+    "view_transform": "Standard"
+  },
+  "counts": {
+    "actions": 14,
+    "armatures": 1,
+    "cameras": 1,
+    "collections": 1,
+    "images": 9,
+    "lights": 0,
+    "materials": 3,
+    "meshes": 7,
+    "node_groups": 0,
+    "objects": 70,
+    "scenes": 1,
+    "texts": 1,
+    "worlds": 1
+  },
+  "cycles": {
+    "adaptive_threshold": 0.009999999776482582,
+    "blur_glossy": 1.0,
+    "caustics_reflective": true,
+    "caustics_refractive": true,
+    "denoiser": "OPENIMAGEDENOISE",
+    "device": "GPU",
+    "diffuse_bounces": 1,
+    "glossy_bounces": 2,
+    "light_sampling_threshold": 0.009999999776482582,
+    "max_bounces": 4,
+    "preview_samples": 128,
+    "sample_clamp_direct": 0.0,
+    "sample_clamp_indirect": 10.0,
+    "samples": 128,
+    "transmission_bounces": 4,
+    "transparent_max_bounces": 4,
+    "use_adaptive_sampling": false,
+    "use_denoising": true,
+    "use_light_tree": false,
+    "volume_bounces": 0
+  },
+  "file": "/home/fmb/projects/LumiMotion/blend_files/blendfiles_v5_specular32/jumpingjacks_v5_specular32.blend",
+  "file_version": [
+    4,
+    4,
+    32
+  ],
+  "frame": {
+    "current": 150,
+    "end": 150,
+    "start": 1
+  },
+  "geometry": {
+    "total_polygons": 27082,
+    "total_vertices": 30904
+  },
+  "images": {
+    "Render Result": {
+      "colorspace": "",
+      "depth": 0,
+      "filepath": "",
+      "is_float": false,
+      "size": [
+        0,
+        0
+      ],
+      "source": "VIEWER"
+    },
+    "file1.001": {
+      "colorspace": "sRGB",
+      "depth": 24,
+      "filepath": "/home/jandubinski/Dynamic3DGS/specular/fbx/../../../../home/app/mixamo-mini/tmp/skins_f4054b11-1dc2-48f8-b555-f9a2e140ba97.fbm/Ch02_1001_Diffuse.png",
+      "is_float": false,
+      "size": [
+        4096,
+        4096
+      ],
+      "source": "FILE"
+    },
+    "file14.001": {
+      "colorspace": "sRGB",
+      "depth": 32,
+      "filepath": "/home/jandubinski/Dynamic3DGS/specular/fbx/../../../../home/app/mixamo-mini/tmp/skins_f4054b11-1dc2-48f8-b555-f9a2e140ba97.fbm/Ch02_1002_Diffuse.png",
+      "is_float": false,
+      "size": [
+        2048,
+        2048
+      ],
+      "source": "FILE"
+    },
+    "file14.004": {
+      "colorspace": "Non-Color",
+      "depth": 32,
+      "filepath": "/home/jandubinski/Dynamic3DGS/specular/fbx/../../../../home/app/mixamo-mini/tmp/skins_f4054b11-1dc2-48f8-b555-f9a2e140ba97.fbm/Ch02_1002_Diffuse.png",
+      "is_float": false,
+      "size": [
+        2048,
+        2048
+      ],
+      "source": "FILE"
+    },
+    "file15.001": {
+      "colorspace": "Non-Color",
+      "depth": 24,
+      "filepath": "/home/jandubinski/Dynamic3DGS/specular/fbx/../../../../home/app/mixamo-mini/tmp/skins_f4054b11-1dc2-48f8-b555-f9a2e140ba97.fbm/Ch02_1002_Normal.png",
+      "is_float": false,
+      "size": [
+        2048,
+        2048
+      ],
+      "source": "FILE"
+    },
+    "file3.001": {
+      "colorspace": "Non-Color",
+      "depth": 24,
+      "filepath": "/home/jandubinski/Dynamic3DGS/specular/fbx/../../../../home/app/mixamo-mini/tmp/skins_f4054b11-1dc2-48f8-b555-f9a2e140ba97.fbm/Ch02_1001_Normal.png",
+      "is_float": false,
+      "size": [
+        4096,
+        4096
+      ],
+      "source": "FILE"
+    },
+    "file5": {
+      "colorspace": "Non-Color",
+      "depth": 24,
+      "filepath": "/home/jandubinski/Dynamic3DGS/specular/fbx/../../../../home/app/mixamo-mini/tmp/skins_f4054b11-1dc2-48f8-b555-f9a2e140ba97.fbm/Ch02_1001_Specular.png",
+      "is_float": false,
+      "size": [
+        4096,
+        4096
+      ],
+      "source": "FILE"
+    },
+    "file6": {
+      "colorspace": "Non-Color",
+      "depth": 8,
+      "filepath": "/home/jandubinski/Dynamic3DGS/specular/fbx/../../../../home/app/mixamo-mini/tmp/skins_f4054b11-1dc2-48f8-b555-f9a2e140ba97.fbm/Ch02_1001_Glossiness.png",
+      "is_float": false,
+      "size": [
+        4096,
+        4096
+      ],
+      "source": "FILE"
+    },
+    "golden_bay_4k_32x16_rot330.hdr": {
+      "colorspace": "Linear",
+      "depth": 0,
+      "filepath": "/Users/jandubinski/Dynamic3GS/envmaps_32/golden_bay_4k_32x16_rot330.hdr",
+      "is_float": false,
+      "size": [
+        0,
+        0
+      ],
+      "source": "FILE"
+    }
+  },
+  "materials": {
+    "Ch02_body.001": {
+      "n_nodes": 7,
+      "node_types": {
+        "BSDF_PRINCIPLED": 1,
+        "NORMAL_MAP": 1,
+        "OUTPUT_MATERIAL": 1,
+        "TEX_IMAGE": 4
+      },
+      "principled_inputs": {
+        "Alpha": 1.0,
+        "Anisotropic": 0.0,
+        "Anisotropic Rotation": 0.0,
+        "Base Color": "LINKED",
+        "Clearcoat": 0.0,
+        "Clearcoat Normal": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Clearcoat Roughness": 0.029999999329447746,
+        "Emission": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "Emission Strength": 1.0,
+        "IOR": 1.5,
+        "Metallic": 0.0,
+        "Normal": "LINKED",
+        "Roughness": 0.5777864456176758,
+        "Sheen": 0.0,
+        "Sheen Tint": 0.5,
+        "Specular": "LINKED",
+        "Specular Tint": 0.0,
+        "Subsurface": 0.0,
+        "Subsurface Anisotropy": 0.0,
+        "Subsurface Color": [
+          0.800000011920929,
+          0.800000011920929,
+          0.800000011920929,
+          1.0
+        ],
+        "Subsurface IOR": 1.399999976158142,
+        "Subsurface Radius": [
+          1.0,
+          0.20000000298023224,
+          0.10000000149011612
+        ],
+        "Tangent": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Transmission": 0.0,
+        "Transmission Roughness": 0.0,
+        "Weight": 0.0
+      },
+      "use_nodes": true
+    },
+    "Ch02_hair.001": {
+      "n_nodes": 6,
+      "node_types": {
+        "BSDF_PRINCIPLED": 1,
+        "NORMAL_MAP": 1,
+        "OUTPUT_MATERIAL": 1,
+        "TEX_IMAGE": 3
+      },
+      "principled_inputs": {
+        "Alpha": "LINKED",
+        "Anisotropic": 0.0,
+        "Anisotropic Rotation": 0.0,
+        "Base Color": "LINKED",
+        "Clearcoat": 0.0,
+        "Clearcoat Normal": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Clearcoat Roughness": 0.029999999329447746,
+        "Emission": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "Emission Strength": 1.0,
+        "IOR": 1.5,
+        "Metallic": 0.0,
+        "Normal": "LINKED",
+        "Roughness": 0.5527864098548889,
+        "Sheen": 0.0,
+        "Sheen Tint": 0.5,
+        "Specular": 1.0,
+        "Specular Tint": 0.0,
+        "Subsurface": 0.0,
+        "Subsurface Anisotropy": 0.0,
+        "Subsurface Color": [
+          0.800000011920929,
+          0.800000011920929,
+          0.800000011920929,
+          1.0
+        ],
+        "Subsurface IOR": 1.399999976158142,
+        "Subsurface Radius": [
+          1.0,
+          0.20000000298023224,
+          0.10000000149011612
+        ],
+        "Tangent": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Transmission": 0.0,
+        "Transmission Roughness": 0.0,
+        "Weight": 0.0
+      },
+      "use_nodes": true
+    },
+    "Material.001": {
+      "n_nodes": 4,
+      "node_types": {
+        "BSDF_DIFFUSE": 1,
+        "OUTPUT_MATERIAL": 1,
+        "TEX_BRICK": 1,
+        "TEX_CHECKER": 1
+      },
+      "use_nodes": true
+    }
+  },
+  "modifier_types": {
+    "ARMATURE": 6
+  },
+  "n_view_layers": 1,
+  "object_types": {
+    "ARMATURE": 1,
+    "CAMERA": 1,
+    "EMPTY": 61,
+    "MESH": 7
+  },
+  "passes": {
+    "use_pass_ambient_occlusion": false,
+    "use_pass_combined": true,
+    "use_pass_cryptomatte_accurate": true,
+    "use_pass_cryptomatte_asset": false,
+    "use_pass_cryptomatte_material": false,
+    "use_pass_cryptomatte_object": false,
+    "use_pass_diffuse_color": true,
+    "use_pass_diffuse_direct": false,
+    "use_pass_diffuse_indirect": false,
+    "use_pass_emit": false,
+    "use_pass_environment": false,
+    "use_pass_glossy_color": false,
+    "use_pass_glossy_direct": false,
+    "use_pass_glossy_indirect": false,
+    "use_pass_material_index": false,
+    "use_pass_mist": false,
+    "use_pass_normal": false,
+    "use_pass_object_index": false,
+    "use_pass_position": false,
+    "use_pass_shadow": false,
+    "use_pass_subsurface_color": false,
+    "use_pass_subsurface_direct": false,
+    "use_pass_subsurface_indirect": false,
+    "use_pass_transmission_color": false,
+    "use_pass_transmission_direct": false,
+    "use_pass_transmission_indirect": false,
+    "use_pass_uv": false,
+    "use_pass_vector": false,
+    "use_pass_z": true
+  },
+  "render": {
+    "engine": "CYCLES",
+    "film_transparent": true,
+    "fps": 30,
+    "image_settings": {
+      "color_depth": "8",
+      "color_management": "FOLLOW_SCENE",
+      "color_mode": "RGBA",
+      "exr_codec": "ZIP",
+      "file_format": "PNG"
+    },
+    "resolution_percentage": 100,
+    "resolution_x": 800,
+    "resolution_y": 800,
+    "use_compositing": true,
+    "use_persistent_data": true,
+    "use_sequencer": true
+  },
+  "view_layer_name": "ViewLayer",
+  "world": {
+    "links": [
+      "Texture Coordinate.Generated -> Mapping.Vector",
+      "Mapping.Vector -> Environment Texture.Vector",
+      "Environment Texture.Color -> Background.Color",
+      "Background.Background -> World Output.Surface"
+    ],
+    "name": "World",
+    "nodes": [
+      {
+        "name": "Background",
+        "strength": 1.0,
+        "type": "BACKGROUND"
+      },
+      {
+        "image": "golden_bay_4k_32x16_rot330.hdr",
+        "image_colorspace": "Linear",
+        "name": "Environment Texture",
+        "projection": "EQUIRECTANGULAR",
+        "type": "TEX_ENVIRONMENT"
+      },
+      {
+        "name": "World Output",
+        "type": "OUTPUT_WORLD"
+      },
+      {
+        "name": "Mapping",
+        "type": "MAPPING"
+      },
+      {
+        "name": "Texture Coordinate",
+        "type": "TEX_COORD"
+      }
+    ],
+    "use_nodes": true
+  }
+}

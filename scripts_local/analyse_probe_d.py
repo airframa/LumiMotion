@@ -71,17 +71,35 @@ def load_gt_albedo(albedo_folder, frame_num, target_hw):
     return srgb_to_rgb(img / 255.0)  # (3,H,W) linear
 
 
-def load_dynamic_mask(dynamic_mask_dir, frame_num, target_hw):
-    """dynamic_mask/mask_XXXX.png: RGB channels are a soft coverage map,
-    alpha is the silhouette of the *dynamic-only* Gaussian subset
-    (docs/lumimotion_eval.md's unsupervised static/dynamic split). Alpha
-    thresholded at 0.5 gives "pixels a moving Gaussian projects to" --
-    excludes the static floor and any statically-classified body parts."""
+def load_dynamic_mask(dynamic_mask_dir, frame_num, target_hw, channel="rgb"):
+    """dynamic_mask/mask_XXXX.png -> (H,W) bool "this pixel shows a DYNAMIC
+    (armature-driven) surface".
+
+    Channel semantics, established by reading the generation script itself
+    (docs/blend_files_survey.md 1c) and confirmed empirically
+    (docs/indirect_fraction.md, "Correction" section):
+      * RGB   -- the actual dynamic/static segmentation. The generator assigns
+                 a pure-white emission material to meshes carrying an Armature
+                 modifier targeting "Armature" (the moving character) and
+                 pure-black to everything else (the static floor/props).
+                 R==G==B exactly; effectively binary.
+      * Alpha -- ordinary render alpha of ANY opaque object in frame. Both
+                 character and floor are opaque, so this is just the
+                 whole-scene foreground silhouette (measured IoU 0.999 against
+                 the beauty render's own alpha) and carries NO dynamic/static
+                 information at all.
+
+    `channel="rgb"` is correct and the default. `channel="alpha"` reproduces
+    the original (buggy) behaviour so that pre-fix numbers in
+    docs/test1_probe_d*.md and docs/indirect_fraction.md stay reproducible.
+    """
+    if channel not in ("rgb", "alpha"):
+        raise ValueError(f"channel must be 'rgb' or 'alpha', got {channel!r}")
     path = os.path.join(dynamic_mask_dir, f"mask_{frame_num:04d}.png")
     img = read_image(path).float()
-    alpha = img[3:4]
-    alpha = F.interpolate(alpha.unsqueeze(0), size=target_hw, mode='bilinear', align_corners=False).squeeze(0)
-    return (alpha[0] > 127)  # (H,W) bool
+    sel = img[:3].mean(dim=0, keepdim=True) if channel == "rgb" else img[3:4]
+    sel = F.interpolate(sel.unsqueeze(0), size=target_hw, mode='bilinear', align_corners=False).squeeze(0)
+    return (sel[0] > 127)  # (H,W) bool
 
 
 def relative_error_scalar(render_linear, gt_linear, relative, eps):
@@ -164,7 +182,7 @@ def find_near_identical_pairs(frame_num_list, dxyz_subsampled, min_gap, top_k):
 def save_qualitative_panel(data_dir, gt_color_folder, gt_albedo_folder, frame_num,
                            erosion_px, out_path, scene_label, tag,
                            relative_error=False, relative_eps=0.01, dynamic_mask_dir=None,
-                           relative_eps_k=None):
+                           relative_eps_k=None, dynamic_mask_channel="rgb"):
     """Beauty render | GT | L_ind (visualised) | signed residual heatmap for
     one specific frame, so the numeric correlations can be checked against
     an actual image rather than taken on faith."""
@@ -175,7 +193,7 @@ def save_qualitative_panel(data_dir, gt_color_folder, gt_albedo_folder, frame_nu
 
     mask = erode_mask(alpha_mask, erosion_px)
     if dynamic_mask_dir is not None:
-        mask = mask & load_dynamic_mask(dynamic_mask_dir, frame_num, (H, W))
+        mask = mask & load_dynamic_mask(dynamic_mask_dir, frame_num, (H, W), channel=dynamic_mask_channel)
     gt_rgb_linear = load_gt_rgb(gt_color_folder, frame_num, (H, W))
     render_linear = srgb_to_rgb(render_srgb)
     color_eps = compute_eps(gt_rgb_linear, mask, relative_eps, relative_eps_k)
@@ -207,7 +225,7 @@ def save_qualitative_panel(data_dir, gt_color_folder, gt_albedo_folder, frame_nu
 def analyse_scene(traj_dir, source_path, train_light_folder, frame_stats_csv,
                   erosion_px, out_dir, scene_label, pose_subsample=4000, pose_seed=0,
                   relative_error=False, relative_eps=0.01, dynamic_mask_dir=None,
-                  relative_eps_k=None):
+                  relative_eps_k=None, dynamic_mask_channel="rgb"):
     os.makedirs(out_dir, exist_ok=True)
     data_dir = os.path.join(traj_dir, "frame_data")
     frame_files = sorted(glob.glob(os.path.join(data_dir, "frame_*.pt")))
@@ -238,7 +256,8 @@ def analyse_scene(traj_dir, source_path, train_light_folder, frame_stats_csv,
 
         mask = erode_mask(alpha_mask, erosion_px)
         if dynamic_mask_dir is not None:
-            mask = mask & load_dynamic_mask(dynamic_mask_dir, frame_num, (H, W))
+            mask = mask & load_dynamic_mask(dynamic_mask_dir, frame_num, (H, W),
+                                            channel=dynamic_mask_channel)
         if mask.sum().item() < 100:
             print(f"  [skip] frame {frame_num}: <100 foreground px after erosion"
                   f"{' + dynamic-mask' if dynamic_mask_dir else ''}")
@@ -370,12 +389,14 @@ def analyse_scene(traj_dir, source_path, train_light_folder, frame_stats_csv,
                                erosion_px, os.path.join(out_dir, "qualitative_best_case.png"),
                                scene_label, f"max r_lind={best['r_lind']:.3f}",
                                relative_error=relative_error, relative_eps=relative_eps,
-                               dynamic_mask_dir=dynamic_mask_dir, relative_eps_k=relative_eps_k)
+                               dynamic_mask_dir=dynamic_mask_dir, relative_eps_k=relative_eps_k,
+                               dynamic_mask_channel=dynamic_mask_channel)
         save_qualitative_panel(data_dir, gt_color_folder, gt_albedo_folder, median["frame_num"],
                                erosion_px, os.path.join(out_dir, "qualitative_median_case.png"),
                                scene_label, f"median r_lind={median['r_lind']:.3f}",
                                relative_error=relative_error, relative_eps=relative_eps,
-                               dynamic_mask_dir=dynamic_mask_dir, relative_eps_k=relative_eps_k)
+                               dynamic_mask_dir=dynamic_mask_dir, relative_eps_k=relative_eps_k,
+                               dynamic_mask_channel=dynamic_mask_channel)
 
     # ---- control (a): minimum-deformation frames vs. the rest ----
     valid = [r for r in per_frame if r["mean_d_xyz"] is not None]
@@ -420,6 +441,7 @@ def analyse_scene(traj_dir, source_path, train_light_folder, frame_stats_csv,
         "scene": scene_label, "n_frames_analysed": len(per_frame), "erosion_px": erosion_px,
         "error_kind": error_kind, "relative_eps": relative_eps if relative_error else None,
         "relative_eps_k": relative_eps_k, "dynamic_mask_dir": dynamic_mask_dir,
+        "dynamic_mask_channel": dynamic_mask_channel,
         "per_frame": per_frame, "decile_results": decile_results,
         "control_min_deformation": control_a, "control_periodicity": control_b,
     }
@@ -448,11 +470,16 @@ if __name__ == "__main__":
                              "different overall brightness (see docs/test1_probe_d_relight.md).")
     parser.add_argument("--dynamic_mask_dir", type=str, default=None,
                         help="If given, intersect the eroded alpha mask with this "
-                             "dynamic_mask/ folder's per-frame alpha (restricts to "
-                             "pixels a moving Gaussian projects to).")
+                             "dynamic_mask/ folder's per-frame mask (restricts to "
+                             "pixels showing a dynamic/armature-driven surface).")
+    parser.add_argument("--dynamic_mask_channel", choices=["rgb", "alpha"], default="rgb",
+                        help="Which channel of the dynamic_mask PNGs encodes dynamic/static. "
+                             "'rgb' is correct (see docs/blend_files_survey.md); 'alpha' "
+                             "reproduces the original buggy behaviour for comparison.")
     args = parser.parse_args()
 
     analyse_scene(args.traj_dir, args.source_path, args.train_light_folder, args.frame_stats_csv,
                  args.erosion_px, args.out_dir, args.scene_label,
                  relative_error=args.relative_error, relative_eps=args.relative_eps,
-                 dynamic_mask_dir=args.dynamic_mask_dir, relative_eps_k=args.relative_eps_k)
+                 dynamic_mask_dir=args.dynamic_mask_dir, relative_eps_k=args.relative_eps_k,
+                 dynamic_mask_channel=args.dynamic_mask_channel)

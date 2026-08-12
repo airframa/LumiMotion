@@ -80,7 +80,7 @@ def stats(x):
 
 
 def run(dataset, pipe, opt, load_iter, out_dir, relight, erosion_px, dynamic_mask_dir,
-        pixel_subsample, seed, map_frames):
+        pixel_subsample, seed, map_frames, dynamic_mask_channel="rgb"):
     os.makedirs(out_dir, exist_ok=True)
     rng = np.random.default_rng(seed)
 
@@ -154,7 +154,8 @@ def run(dataset, pipe, opt, load_iter, out_dir, relight, erosion_px, dynamic_mas
             H, W = total_s.shape
             mask = erode_mask((pkg_full["rend_alpha"][0] > 0.5).cpu(), erosion_px)
             if dynamic_mask_dir is not None:
-                dyn = load_dynamic_mask(dynamic_mask_dir, fnum, (H, W))
+                dyn = load_dynamic_mask(dynamic_mask_dir, fnum, (H, W),
+                                        channel=dynamic_mask_channel)
                 mask_dyn = mask & dyn
             else:
                 mask_dyn = mask
@@ -238,6 +239,7 @@ def run(dataset, pipe, opt, load_iter, out_dir, relight, erosion_px, dynamic_mas
     summary = {
         "relight": relight, "erosion_px": erosion_px,
         "dynamic_mask_dir": dynamic_mask_dir,
+        "dynamic_mask_channel": dynamic_mask_channel,
         "pooled_dynamic": stats(pooled),
         "pooled_foreground_frameavg": {
             k: float(np.mean([r["foreground"][k] for r in per_frame])) for k in ["mean", "median", "p90", "p99"]
@@ -262,6 +264,10 @@ if __name__ == "__main__":
     parser.add_argument("--relight", action="store_true")
     parser.add_argument("--erosion_px", type=int, default=5)
     parser.add_argument("--dynamic_mask_dir", type=str, default=None)
+    parser.add_argument("--dynamic_mask_channel", choices=["rgb", "alpha"], default="rgb",
+                        help="Which channel encodes dynamic/static. 'rgb' is correct "
+                             "(docs/blend_files_survey.md); 'alpha' reproduces the "
+                             "original buggy behaviour.")
     parser.add_argument("--pixel_subsample", type=int, default=3000)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--map_frames", type=int, nargs="*", default=[25, 75, 125])
@@ -275,4 +281,4 @@ if __name__ == "__main__":
 
     run(model.extract(args), pipeline.extract(args), opt.extract(args), args.load_iter, out_dir,
         args.relight, args.erosion_px, args.dynamic_mask_dir, args.pixel_subsample, args.seed,
-        set(args.map_frames))
+        set(args.map_frames), dynamic_mask_channel=args.dynamic_mask_channel)
