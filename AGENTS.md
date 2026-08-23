@@ -19,21 +19,29 @@ A separate worktree exists for an unrelated observability direction:
 branch: lumimotion-observability
 ```
 
-**Do not switch branches, edit the other worktree, cherry-pick from it, or treat
-its state as part of this project unless explicitly asked.**
+**Do not switch branches, edit the other worktree, cherry-pick from it, compare
+against it, or treat its state as part of this project unless explicitly asked.**
 
 The goal of this branch is a **new method paper**, not an evaluation/diagnostics
 paper and not a continuation of the previous dynamic-GI mechanism hunt.
 
+---
+
 ## Read this first
 
-The authoritative direction document for this worktree is:
+The authoritative research-direction document for this worktree is:
 
 ```text
 docs/CONSTITUTIVE_APPEARANCE_DIRECTION.md
 ```
 
 Read it before doing substantive work.
+
+The completed substrate audit is:
+
+```text
+docs/constitutive_code_audit.md
+```
 
 Historical LumiMotion campaign documents live under:
 
@@ -53,12 +61,18 @@ docs/miscellaneous/blend_files_survey.md
 
 Treat `docs/miscellaneous/` as **historical evidence, not the current research
 plan**. Some files contain superseded analyses, retracted claims, or debugging
-paths from the previous campaign. Prefer the latest summary when historical
-documents conflict, and verify code facts against the current source tree rather
-than trusting old prose.
+paths from the previous campaign.
+
+Prefer:
+1. current source code for implementation facts;
+2. `docs/constitutive_code_audit.md` for the current LumiMotion substrate state;
+3. `docs/CONSTITUTIVE_APPEARANCE_DIRECTION.md` for the active research framing;
+4. `docs/miscellaneous/` only for historical context.
 
 Do not reorganize, rewrite, or "clean up" `docs/miscellaneous/` unless explicitly
 asked.
+
+---
 
 ## Current research hypothesis
 
@@ -79,15 +93,26 @@ theta_i,t = theta_i^0 + g(z_i, epsilon_i,t)
 
 where:
 
-- `theta_i^0` is the canonical material state,
-- `z_i` is material/local identity,
-- `epsilon_i,t` is a local deformation/strain descriptor,
+- `theta_i^0` is the canonical material state;
+- `z_i` is material/local identity;
+- `epsilon_i,t` is a local physical deformation/strain descriptor;
 - `g` is a low-capacity constitutive appearance law.
 
 A direct timestep input is **not** the intended scientific model.
 
 The key final generalization axis is **unseen deformation**, ideally combined
 with unseen illumination.
+
+The intended paper is not merely about making material dynamic. It is about
+recovering a **constitutive appearance law**:
+
+```text
+local material deformation
+        ->
+intrinsic reflectance response
+```
+
+---
 
 ## What this project is NOT
 
@@ -104,16 +129,46 @@ Do not silently drift into any of these framings:
 If a proposed change weakens the thesis toward one of these, flag it before
 implementation.
 
-## Current phase
-
-We are at the **pre-method feasibility stage**.
-
-The planned sequence is:
+In particular:
 
 ```text
-read-only LumiMotion code audit
+roughness = MLP(time)
+```
+
+is not the intended method.
+
+The scientific distinction we want to preserve is:
+
+```text
+same material + same deformation state
     ->
-validated deformation/strain extraction
+same material response
+```
+
+even if the same state occurs at a different time or under a different motion.
+
+---
+
+## Current phase
+
+The LumiMotion substrate audit is complete.
+
+Audit verdict:
+
+```text
+feasible with architectural caveats
+```
+
+Current project sequence:
+
+```text
+LumiMotion substrate audit          [DONE]
+    ->
+strain-interface specification      [CURRENT]
+    ->
+validated mesh strain extraction
+    ->
+measure available deformation regime
     ->
 pre-registered synthetic signal gate
     ->
@@ -124,10 +179,18 @@ minimal LumiMotion prototype
 anisotropic/material-frame extension if justified
 ```
 
-**Do not skip ahead.**
+The immediate task is the **strain-interface specification**.
 
-At the moment, the immediate task is the read-only LumiMotion code audit.
-No training-code modification is justified yet.
+Do not implement the strain extractor yet.
+
+Do not modify LumiMotion training yet.
+
+Do not implement deformation-conditioned roughness yet.
+
+Do not run the constitutive-appearance signal experiment before its
+pre-registration exists.
+
+---
 
 ## Default operating mode
 
@@ -144,7 +207,7 @@ Unless the user explicitly asks for an implementation:
 - do not change datasets;
 - do not rewrite existing research documents.
 
-Writing a requested analysis document under `docs/` is allowed.
+Writing a requested analysis/specification document under `docs/` is allowed.
 
 ### User launches long jobs
 
@@ -161,6 +224,8 @@ When a future task requires a long render/training job:
 4. do **not** launch the long job unless explicitly asked.
 
 Do not use `nohup` as a substitute for `tmux`.
+
+---
 
 ## Scientific discipline
 
@@ -207,7 +272,8 @@ For this project, especially important controls include:
 - known synthetic stretch;
 - rigid translation/rotation (`strain ≈ 0`);
 - GT geometry/normals when testing material-change mechanisms;
-- held-out deformation and held-out illumination.
+- held-out deformation;
+- held-out illumination.
 
 ### Verify invariants numerically
 
@@ -216,9 +282,9 @@ Do not trust plausible images.
 For deformation extraction, expected invariants include:
 
 ```text
-same configuration -> F ≈ I
-rigid motion        -> U ≈ I
-known uniaxial stretch -> recovered principal stretch matches authored value
+same configuration         -> F ≈ I
+rigid motion               -> U ≈ I
+known uniaxial stretch     -> recovered principal stretch matches authored value
 ```
 
 For render decompositions or new buffers, define and assert any conservation
@@ -234,7 +300,10 @@ Do not conflate:
 - rotation with strain;
 - world-frame orientation with intrinsic material state;
 - display-space PNG values with linear radiance;
-- static material fitting error with deformation-conditioned material response.
+- static material fitting error with deformation-conditioned material response;
+- Gaussian scale with physical surface stretch.
+
+---
 
 ## Code-audit standards
 
@@ -253,60 +322,198 @@ For read-only audits:
 A useful audit should answer **where the minimal future hook belongs** without
 implementing it prematurely.
 
-## LumiMotion facts and historical hazards
+---
 
-### Evaluation BVH bug
+## Verified substrate facts from the constitutive-appearance audit
 
-Previous inspection found that released dynamic eval scripts build the BVH at
-frame 0 and do not update it per frame, while training does update it.
+Source:
 
-Any future head-to-head evaluation must re-check and fix/avoid this issue before
-using the baseline numbers.
+```text
+docs/constitutive_code_audit.md
+```
 
-### Dynamic-mask semantics
+These facts were verified against the current `constitutive-appearance` source
+tree and should not be re-derived unless the relevant code changes.
 
-For the author-shared Blender mask generator:
+### Stage-2 material state
 
-- **RGB** is the dynamic/static segmentation;
-- **Alpha** is essentially the whole opaque foreground silhouette.
+Stage-2 intrinsic albedo and scalar roughness are per-Gaussian and
+**time-invariant**.
 
-Do not use Alpha as the dynamic-only mask.
+There is no learned metallic parameter.
 
-### Camera generation
+The direct BRDF uses a fixed dielectric Fresnel term.
 
-The author scripts use deterministic random camera sampling with seed `40422`.
-Dynamic frame `i` is paired with camera sample `i`.
+Material parameters are serialized through the Gaussian PLY.
 
-Static-timestep variants keep the mesh at a fixed frame while cycling through the
-same camera sequence.
+Stage-2 geometry/deformation is frozen while material parameters remain
+optimizable.
 
-### Color management
+Important qualification:
 
-Color Management -> View Transform is a saved per-file Blender property and is not
-set by the embedded generation scripts.
+appearance is **not wholly time-invariant** even though intrinsic material is.
 
-- beauty files were surveyed with `Standard`;
-- a normal-pass example uses `Raw`.
+A time-conditioned Stage-1 shadow/radiance pathway remains active and can
+compensate for material errors.
 
-Any new pass must explicitly inspect/set the intended view transform.
+Therefore future constitutive-material comparisons must distinguish:
 
-### Current authored character material
+```text
+intrinsic material change
+vs.
+time-conditioned radiance/shadow compensation
+```
 
-In the surveyed character files, the character Principled material uses fixed
-roughness `0.553` rather than deformation-dependent roughness.
+Do not interpret an image-space gain as material evidence without controlling
+this pathway appropriately.
 
-Therefore the existing Blender benchmark is **not** ground truth for the proposed
-constitutive-appearance phenomenon.
+### Gaussian identity
+
+Gaussian identity is **not stable during Stage 1** because densification,
+splitting, and pruning change topology.
+
+After the selected Stage-1 checkpoint is loaded into Stage 2:
+
+- Gaussian count/order is fixed;
+- Stage 2 performs no densification or pruning;
+- canonical Gaussian row `i` maps deterministically to deformed row `i`
+  at every timestep.
+
+This correspondence is checkpoint-local.
+
+There is no persistent semantic Gaussian ID stored across independently written
+PLY files.
+
+Any canonical neighbourhood graph must therefore be associated with the exact
+loaded Stage-1 checkpoint / PLY row ordering.
+
+### Canonical and deformed state
+
+At the shared `render_ir` path, canonical and deformed Gaussian positions
+coexist:
+
+```text
+x_i^canonical
+x_i^t = x_i^canonical + d_xyz_i,t
+```
+
+Canonical and deformed rotations/scales are also simultaneously available.
+
+This is the preferred future seam for deformation-state computation.
+
+### Scale is NOT physical strain
+
+The deformation model predicts `d_scaling` but then forcibly zeroes it.
+
+Therefore:
+
+```text
+Gaussian scale change != available physical stretch signal
+```
+
+Do not use Gaussian scaling as a deformation/strain proxy.
+
+Any strain estimate must instead come from the relative motion of a fixed
+canonical neighbourhood.
+
+### Canonical neighbourhoods
+
+No persistent canonical kNN graph currently exists.
+
+The bundled `simple-knn` functionality used by LumiMotion returns nearest-
+neighbour distance for scale initialization; current Python code does not retain
+neighbour identities.
+
+A future Gaussian strain estimator will therefore need an explicitly computed
+and stored fixed canonical neighbour graph.
+
+That graph should:
+
+- be built after loading the exact Stage-1 checkpoint used by Stage 2;
+- preserve canonical row identity;
+- remain fixed across timesteps;
+- not be recomputed in deformed space.
+
+### Normals and material frames
+
+LumiMotion has geometric surfel orientation/normals but no stored:
+
+- tangent;
+- bitangent;
+- UV;
+- intrinsic material axis/frame.
+
+The current GGX model is isotropic.
+
+Therefore scalar isotropic roughness is the intended first constitutive-
+appearance target.
+
+Directional / anisotropic material response is intentionally deferred until a
+stable material-frame representation is justified.
+
+Do not silently infer a material frame from a view-dependent or ambiguously
+signed geometric normal.
+
+### Oracle roughness consistency
+
+A future externally supplied per-Gaussian/per-frame roughness field must be
+used consistently in BOTH:
+
+1. primary material rasterization;
+2. secondary ray-traced material features used for relighting/indirect light.
+
+Updating only the primary rasterized roughness would create two inconsistent
+material definitions for the same Gaussian.
+
+The audit's unified-material approach ("Candidate B") is therefore the preferred
+future oracle architecture.
+
+Do not implement it yet.
+
+### Dynamic evaluation BVH bug
+
+Current source confirms:
+
+- Stage-2 training builds the BVH and updates/refits it for later dynamic frames;
+- dynamic NVS evaluation builds on the first frame and does not update it;
+- dynamic relighting evaluation has the same stale-first-frame behavior.
+
+Any future quantitative dynamic NVS/relighting comparison that uses secondary
+visibility must address this before results are interpreted.
+
+Do not fix it opportunistically during unrelated tasks.
+
+Make it an explicit, scoped change when evaluation work begins.
+
+### Current substrate verdict
+
+```text
+feasible with architectural caveats
+```
+
+No audit finding invalidates the scalar constitutive-appearance direction.
+
+The major remaining uncertainty is scientific, not architectural:
+
+```text
+Is deformation-dependent reflectance strong and observable enough to matter?
+```
+
+That question must be approached only after deformation/strain extraction has
+been defined and validated.
+
+---
 
 ## Joanna's author-shared Blender assets
 
-Joanna's author-shared Blender files are already present locally in this worktree at:
+Joanna's author-shared Blender files are already present locally in this worktree
+at:
 
 ```text
 blend_files/blendfiles_v5_specular32/
 ```
 
-The directory contains the five main scene families and their associated variants:
+The directory contains the five main scene families:
 
 ```text
 hook150_v5_specular32.blend
@@ -318,12 +525,13 @@ standup150_v5_specular32.blend
 
 plus:
 
-- `*_dynamic_mask.blend`
-- `*_roughness.blend`
-- `envmaps_32/`
-- `blendfiles_for_normals_examples.zip`
+- `*_dynamic_mask.blend`;
+- `*_roughness.blend`;
+- `envmaps_32/`;
+- `blendfiles_for_normals_examples.zip`.
 
-These files predate the `constitutive-appearance` branch and were inherited from the previous LumiMotion research campaign.
+These files predate the `constitutive-appearance` branch and were inherited from
+the previous LumiMotion research campaign.
 
 ### Git status
 
@@ -348,16 +556,18 @@ Therefore:
 - do not delete or clean them;
 - do not save over or re-export the original `.blend` files.
 
-Unless a task explicitly requires Blender-level inspection or rendering, treat the contents as read-only.
+Unless a task explicitly requires Blender-level inspection or rendering, treat
+the contents as read-only.
 
-For code-audit tasks, it is acceptable to inspect:
+For code-audit tasks it is acceptable to inspect:
 
 - directory/file names;
 - repository code referring to `blend_files/`;
 - generation scripts already present elsewhere in the repository;
 - historical documentation describing the assets.
 
-Do not launch Blender merely to reconfirm facts already established by the existing survey unless the current task requires it.
+Do not launch Blender merely to reconfirm facts already established by the
+existing survey unless the current task requires it.
 
 The historical read-only survey is:
 
@@ -373,18 +583,28 @@ Important established facts from that survey include:
 - camera sampling uses fixed seed `40422`;
 - dynamic animation frame `i` is paired with camera sample `i`;
 - the surveyed character Principled material uses fixed roughness `0.553`;
-- the current Blender benchmark therefore does **not** contain deformation-dependent roughness ground truth;
-- Color Management → View Transform is stored per `.blend` file and is not set by the embedded dataset-generation scripts.
+- the current Blender benchmark therefore does **not** contain deformation-
+  dependent roughness ground truth;
+- Color Management -> View Transform is stored per `.blend` file and is not set
+  by the embedded dataset-generation scripts.
 
-These are useful historical facts, but when a future task depends on exact current repository behavior, verify the corresponding code path rather than relying solely on prose.
+These are useful historical facts, but when a future task depends on exact
+current repository behavior, verify the corresponding code path rather than
+relying solely on prose.
 
 ### Role in the constitutive-appearance project
 
-These assets are expected to become useful after the current code audit because their animated meshes may provide canonical and deformed surface geometry for validating local strain extraction.
+These assets are expected to become useful after the current strain-interface
+specification because their animated meshes may provide canonical and deformed
+surface geometry for validating local strain extraction.
 
-They should **not** yet be treated as evidence for deformation-dependent reflectance: their authored material parameters are essentially deformation-invariant.
+They should **not** be treated as evidence for deformation-dependent reflectance:
+their authored material parameters are essentially deformation-invariant.
 
-Do not implement a strain extractor, modify these scenes, or generate new renders until the relevant experiment has been designed and pre-registered.
+Do not implement a strain extractor, modify these scenes, or generate new renders
+until the relevant step has been designed and approved.
+
+---
 
 ## Blender version policy
 
@@ -410,6 +630,8 @@ Therefore:
 
 Do not use the system Blender 3.0.1 for these files; the survey found it crashes.
 
+---
+
 ## Environment
 
 Use the existing working environment unless a concrete requirement proves it
@@ -428,6 +650,8 @@ Do not rebuild or upgrade the environment casually.
 
 GPU jobs should use explicit `CUDA_VISIBLE_DEVICES` when relevant.
 
+---
+
 ## Git / worktree discipline
 
 This repository is a Git worktree.
@@ -441,12 +665,15 @@ Rules:
 - stage files explicitly;
 - do not commit generated data, checkpoints, renders, private assets, or scratch
   outputs;
+- do not use `git add -f` on `blend_files/`;
 - do not rewrite history unless explicitly asked;
 - inspect `git status` before and after edits;
 - keep changes minimal and scoped to the requested task.
 
 If submodules or generated build files are dirty, do not "clean" them without
 permission.
+
+---
 
 ## Project file organization
 
@@ -456,6 +683,7 @@ Current intended structure:
 docs/
 ├── CONSTITUTIVE_APPEARANCE_DIRECTION.md
 ├── constitutive_code_audit.md
+├── constitutive_strain_interface_spec.md
 ├── constitutive_prereg_gate1.md
 ├── constitutive_results_log.md
 └── miscellaneous/
@@ -470,18 +698,21 @@ scripts_local/
     └── manifests/
 ```
 
-Do not create all empty directories preemptively. Create only what the active
-task requires.
+Do not create all empty directories preemptively.
+
+Create only what the active task requires.
 
 New research documents should live directly under `docs/`, not in
 `docs/miscellaneous/`.
+
+---
 
 ## Documentation etiquette
 
 When producing a research document:
 
 - state the question first;
-- distinguish **verified**, **inferred**, **proposed**, and **open**;
+- distinguish **VERIFIED**, **INFERRED**, **PROPOSED**, and **UNKNOWN**;
 - cite exact source locations for code claims;
 - record commands that were actually run;
 - record environment/version details relevant to reproducibility;
@@ -493,44 +724,104 @@ When producing a research document:
 For each confirmatory gate, maintain one preregistration document and one result
 document.
 
-## Current audit target
+---
 
-The next read-only audit should establish:
+## Current task: strain-interface specification
 
-1. where Stage-2 albedo and roughness are initialized, stored, optimized,
-   serialized, rasterized, and consumed;
-2. whether they can currently depend on time/frame;
-3. the exact canonical-to-deformed Gaussian data flow;
-4. whether Gaussian identity is stable across time;
-5. where canonical and deformed positions are simultaneously accessible;
-6. how normals/rotations/scales are transformed;
-7. whether a local deformation gradient can be derived from fixed canonical
-   Gaussian neighborhoods without changing Stage 1;
-8. what kNN/neighborhood machinery already exists;
-9. the narrowest future hook for an externally supplied oracle time-varying
-   roughness field;
-10. silent hazards for strain estimation or material conditioning.
-11. determine how `blend_files/blendfiles_v5_specular32/` relates to the
-    generated LumiMotion datasets and whether any existing repository code
-    already extracts geometry, animation state, normals, roughness, masks, or
-    per-frame metadata from those source scenes.
+The substrate audit is complete.
 
-Do not implement any of these changes during the audit.
+The next task is a **specification only**, not implementation.
+
+Create:
+
+```text
+docs/constitutive_strain_interface_spec.md
+```
+
+The specification must define two compatible deformation-state paths.
+
+### A. Ground-truth mesh strain
+
+For controlled physics/signal experiments using Joanna's animated Blender
+meshes.
+
+It must define:
+
+- canonical/reference configuration;
+- topology-stability requirements;
+- evaluated-mesh coordinate convention;
+- triangle-level surface deformation;
+- principal stretches `lambda1`, `lambda2`;
+- rotation-invariant strain quantities;
+- degeneracy / conditioning handling;
+- authoritative face-level outputs;
+- optional face-to-vertex aggregation;
+- numerical validation invariants;
+- output manifest / provenance requirements.
+
+### B. Future Gaussian-estimated strain
+
+For the eventual LumiMotion method.
+
+It must define:
+
+- association with an exact Stage-1 checkpoint;
+- fixed canonical neighbour graph;
+- canonical/deformed row correspondence;
+- local surface deformation estimation from neighbour positions;
+- compatibility with the mesh-side strain descriptor;
+- why Gaussian scale / `d_scaling` is not physical strain;
+- limitations caused by the absence of a material tangent frame.
+
+The two paths should expose the same physical deformation invariants wherever
+possible.
+
+### Mandatory future implementation gates
+
+Any future strain extractor must pass these before Joanna's animations are
+scientifically interpreted:
+
+```text
+identity:
+same geometry -> lambda1 ≈ 1, lambda2 ≈ 1
+
+rigid transform:
+rotation/translation -> lambda1 ≈ 1, lambda2 ≈ 1
+
+known uniaxial stretch:
+1.10x authored stretch -> one principal stretch ≈ 1.10,
+                          the other ≈ 1.00
+```
+
+Do not choose the strain-to-roughness constitutive law in the interface
+specification.
+
+Do not inspect Joanna's animation strain distribution before the extractor is
+validated.
+
+Do not implement deformation-conditioned material training during this phase.
+
+---
 
 ## Stop conditions
 
 Stop and report instead of improvising if:
 
-- the current source contradicts a central assumption in
+- current source contradicts a central assumption in
   `CONSTITUTIVE_APPEARANCE_DIRECTION.md`;
-- Gaussian identity/topology is not stable in the way the planned strain model
-  requires;
-- the intended material variables are not where historical docs say they are;
-- an audit requires destructive conversion of Joanna's assets;
-- a requested experiment lacks a preregistered prediction/falsifier;
-- a long job would need to be launched without the user's explicit request;
-- a proposed implementation would turn the method into generic time-conditioned
-  appearance without a clear scientific reason.
+- Gaussian identity/topology becomes unsuitable for the planned strain model;
+- material variables differ materially from `constitutive_code_audit.md`;
+- a task requires destructive modification of Joanna's assets;
+- a confirmatory experiment lacks preregistered predictions/falsifiers;
+- a long job would need to be launched without explicit user instruction;
+- an implementation would collapse into generic time-conditioned appearance;
+- a proposed strain definition depends on Gaussian scale as a physical stretch
+  proxy;
+- a result depends on stale dynamic-evaluation BVHs without explicitly fixing or
+  controlling them.
 
-The correct outcome of an audit can be: **the planned hook is not viable**.
-Do not force a positive design conclusion.
+The correct outcome of an audit/specification can be:
+
+> **The proposed path is not viable.**
+
+Do not force a positive result.

@@ -728,6 +728,8 @@ The next task is to establish that we can compute the deformation state cleanly 
 ---
 
 ## 14. Living log
+- 2026-08-23 — LumiMotion substrate audit passed conditionally.
+Stage-2 intrinsic albedo and roughness are confirmed time-invariant. Gaussian identity is fixed after the Stage-1 checkpoint is loaded, and canonical/deformed Gaussian centers coexist at the shared render_ir hook. No canonical neighbour graph or intrinsic material frame exists; learned scale deformation is disabled, so strain must be estimated from neighbourhood deformation rather than Gaussian scale. A time-conditioned Stage-1 shadow/radiance pathway can compensate for material error and must be controlled experimentally. Dynamic NVS/relighting evaluation retains the stale first-frame BVH bug. Future oracle roughness must be propagated consistently through both primary rasterization and secondary ray-traced material features. Verdict: feasible with architectural caveats; proceed to strain-interface specification, not method implementation.
 
 ### 2026-08-23 — direction selected
 
