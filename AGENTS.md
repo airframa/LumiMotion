@@ -300,32 +300,91 @@ constitutive-appearance phenomenon.
 
 ## Joanna's author-shared Blender assets
 
-The Blender archive is private author-shared research material.
-
-Unless explicit redistribution permission is established:
-
-- use it locally;
-- do not commit `.blend` files;
-- do not upload/repackage them;
-- do not add them to public artifacts;
-- keep them under `/data` or another private path and symlink if useful;
-- commit only our scripts, manifests, derived metadata that is safe to share,
-  and documentation.
-
-Recommended local layout:
+Joanna's author-shared Blender files are already present locally in this worktree at:
 
 ```text
-/data/lumimotion_private/joanna_blend_files/
+blend_files/blendfiles_v5_specular32/
 ```
 
-with an optional gitignored/symlinked repo path:
+The directory contains the five main scene families and their associated variants:
 
 ```text
-data_private/joanna_blend_files/
+hook150_v5_specular32.blend
+jumpingjacks_v5_specular32.blend
+mouse_v5_specular32.blend
+spheres_with_rotations_v5_specular32.blend
+standup150_v5_specular32.blend
 ```
 
-If the assets are not present, do not download replacements or guess paths unless
-asked.
+plus:
+
+- `*_dynamic_mask.blend`
+- `*_roughness.blend`
+- `envmaps_32/`
+- `blendfiles_for_normals_examples.zip`
+
+These files predate the `constitutive-appearance` branch and were inherited from the previous LumiMotion research campaign.
+
+### Git status
+
+`blend_files/` is intentionally ignored by `.gitignore`.
+
+Verified:
+
+```bash
+git status --short blend_files/
+git ls-files blend_files/ | head
+```
+
+both return no tracked files.
+
+Therefore:
+
+- treat `blend_files/` as **local, private, untracked research data**;
+- do not move or rename it merely for project organization;
+- do not change `.gitignore` rules for it;
+- do not use `git add -f` on anything under `blend_files/`;
+- do not commit, upload, repackage, or redistribute these assets;
+- do not delete or clean them;
+- do not save over or re-export the original `.blend` files.
+
+Unless a task explicitly requires Blender-level inspection or rendering, treat the contents as read-only.
+
+For code-audit tasks, it is acceptable to inspect:
+
+- directory/file names;
+- repository code referring to `blend_files/`;
+- generation scripts already present elsewhere in the repository;
+- historical documentation describing the assets.
+
+Do not launch Blender merely to reconfirm facts already established by the existing survey unless the current task requires it.
+
+The historical read-only survey is:
+
+```text
+docs/miscellaneous/blend_files_survey.md
+```
+
+Important established facts from that survey include:
+
+- the character scenes use Armature-driven animation;
+- the dynamic-mask **RGB** channels encode the dynamic/static segmentation;
+- the mask Alpha channel is the whole opaque foreground silhouette;
+- camera sampling uses fixed seed `40422`;
+- dynamic animation frame `i` is paired with camera sample `i`;
+- the surveyed character Principled material uses fixed roughness `0.553`;
+- the current Blender benchmark therefore does **not** contain deformation-dependent roughness ground truth;
+- Color Management → View Transform is stored per `.blend` file and is not set by the embedded dataset-generation scripts.
+
+These are useful historical facts, but when a future task depends on exact current repository behavior, verify the corresponding code path rather than relying solely on prose.
+
+### Role in the constitutive-appearance project
+
+These assets are expected to become useful after the current code audit because their animated meshes may provide canonical and deformed surface geometry for validating local strain extraction.
+
+They should **not** yet be treated as evidence for deformation-dependent reflectance: their authored material parameters are essentially deformation-invariant.
+
+Do not implement a strain extractor, modify these scenes, or generate new renders until the relevant experiment has been designed and pre-registered.
 
 ## Blender version policy
 
@@ -451,6 +510,10 @@ The next read-only audit should establish:
 9. the narrowest future hook for an externally supplied oracle time-varying
    roughness field;
 10. silent hazards for strain estimation or material conditioning.
+11. determine how `blend_files/blendfiles_v5_specular32/` relates to the
+    generated LumiMotion datasets and whether any existing repository code
+    already extracts geometry, animation state, normals, roughness, masks, or
+    per-frame metadata from those source scenes.
 
 Do not implement any of these changes during the audit.
 
