@@ -1,4 +1,4 @@
-# CLAUDE.md — Constitutive Appearance / LumiMotion
+# AGENTS.md — Constitutive Appearance / LumiMotion
 
 ## Project
 
