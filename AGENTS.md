@@ -166,9 +166,9 @@ LumiMotion substrate audit          [DONE]
     ->
 strain-interface specification      [DONE]
     ->
-validated mesh strain extraction    [CURRENT]
+validated mesh strain extraction    [DONE]
     ->
-measure available deformation regime
+measure available deformation regime [CURRENT]
     ->
 pre-registered synthetic signal gate
     ->
@@ -179,10 +179,18 @@ minimal LumiMotion prototype
 anisotropic/material-frame extension if justified
 ```
 
-Implement Path A only. Path B Gaussian-neighbour strain remains specified but
-is deferred until the physical/signal gate justifies method development.
+Path A is validated against the frozen numerical and Blender integration gates.
 
-Do not modify LumiMotion training yet.
+The current task is to pre-register and then measure the available
+reference-relative deformation regime in Joanna's source animations.
+
+Do not implement Path B Gaussian-neighbour strain yet.
+
+Do not modify LumiMotion training or materials.
+
+Do not select a strain-to-reflectance law yet.
+
+Do not render or test appearance yet.
 
 Do not implement deformation-conditioned roughness yet.
 
@@ -600,8 +608,14 @@ surface geometry for validating local strain extraction.
 They should **not** be treated as evidence for deformation-dependent reflectance:
 their authored material parameters are essentially deformation-invariant.
 
-Do not implement a strain extractor, modify these scenes, or generate new renders
-until the relevant step has been designed and approved.
+Path A strain extraction is now implemented and validated.
+
+Joanna's source assets may be accessed read-only only after the corresponding
+measurement choices have been pre-registered and committed.
+
+Do not modify, save over, re-export, or redistribute the source `.blend` files.
+Do not render appearance or introduce deformation-dependent materials during
+the deformation-regime characterization phase.
 
 ---
 
@@ -725,19 +739,33 @@ document.
 
 ---
 
-## Current task: strain-interface specification
+## Current task: deformation-regime characterization
 
-The substrate audit is complete.
+Path A reference-relative mesh strain extraction has passed its frozen numerical
+and Blender integration validation gates.
 
-The next task is a **specification only**, not implementation.
+The next research step has two stages:
 
-Create:
+1. pre-register the deformation-regime characterization;
+2. only after that preregistration is reviewed and committed, measure Joanna's
+   source animations.
 
-```text
-docs/constitutive_strain_interface_spec.md
-```
+The purpose of this stage is only to establish the magnitude and spatial
+prevalence of validated reference-relative deformation in the existing
+animations.
 
-The specification must define two compatible deformation-state paths.
+Do not:
+
+- implement Path B Gaussian-neighbour strain;
+- choose a strain-to-reflectance law;
+- modify LumiMotion training or material code;
+- render appearance;
+- rank/select scenes or frames after inspecting strain;
+- define a scientific success/failure threshold for deformation magnitude.
+
+The deformation-regime measurement is descriptive. Whether the measured
+deformation is physically large enough to matter for reflectance is intentionally
+deferred until it is combined with independent material-physics evidence.
 
 ### A. Ground-truth mesh strain
 

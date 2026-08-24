@@ -730,6 +730,14 @@ The next task is to establish that we can compute the deformation state cleanly 
 ## 14. Living log
 - 2026-08-23 — LumiMotion substrate audit passed conditionally.
 Stage-2 intrinsic albedo and roughness are confirmed time-invariant. Gaussian identity is fixed after the Stage-1 checkpoint is loaded, and canonical/deformed Gaussian centers coexist at the shared render_ir hook. No canonical neighbour graph or intrinsic material frame exists; learned scale deformation is disabled, so strain must be estimated from neighbourhood deformation rather than Gaussian scale. A time-conditioned Stage-1 shadow/radiance pathway can compensate for material error and must be controlled experimentally. Dynamic NVS/relighting evaluation retains the stale first-frame BVH bug. Future oracle roughness must be propagated consistently through both primary rasterization and secondary ray-traced material features. Verdict: feasible with architectural caveats; proceed to strain-interface specification, not method implementation.
+- 2026-08-24 — Path-A mesh strain extraction passed the frozen validation
+contract. Identity and 1.10x uniaxial fixtures were exact; rigid-motion
+errors were <=1.11e-16 and the maximum area-identity residual was 2.22e-16.
+All preregistered degeneracy fixtures were correctly rejected with NaN
+descriptors. The Blender 3.6.13 evaluated-mesh smoke path passed with maximum
+stretch error 2.63e-08. Path A is cleared for controlled asset extraction;
+this does not yet establish topology stability or deformation magnitude in
+Joanna's actual animations.
 
 ### 2026-08-23 — direction selected
 

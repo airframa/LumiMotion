@@ -1,0 +1,17 @@
+{
+  "schema": "lumimotion.constitutive.path_a_blender_smoke_validation",
+  "schema_version": 1,
+  "generated_utc": "2026-08-24T08:37:06.009154+00:00",
+  "package": "/tmp/lumimotion_path_a_blender_smoke_v4",
+  "fixture": "in_memory_uniaxial_1.10_plus_rigid",
+  "blender_executable": "/home/fmb/blender-3.6.13-linux-x64/blender",
+  "blender_version": "3.6.13",
+  "blender_build_hash": "791bdfd03f07",
+  "max_abs_lambda_max_error": 2.6260073004991114e-08,
+  "max_abs_lambda_min_error": 3.6087413057828144e-09,
+  "max_abs_area_identity_residual": 4.440892098500626e-16,
+  "invalid_fraction": 0.0,
+  "float64_gate_pass": true,
+  "blender_3_6_13_gate_pass": true,
+  "pass": true
+}
