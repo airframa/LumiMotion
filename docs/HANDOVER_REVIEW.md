@@ -205,13 +205,31 @@ recovery came from `git checkout`.
 
 ## Priority 2 — what a fresh session would need and cannot find
 
-### A1. `--probe_src` is not implemented ⚠️
+### A1. `--probe_src` is not implemented ⚠️ — **RESOLVED 2026-08-23, see note below**
 
 `grep -c probe_src scripts_local/phase3b/observability.py` → **0**. §5.2 says
 `run_probe_views.sh` is "written and verified" (true — syntax and flags verified,
 never run), but there is **no scoring path for its output**. A fresh session would
 render 240 views × 8 rungs and then discover it cannot score them. §22.7 flags
 this; the handover does not.
+
+> **Amendment, 2026-08-23 (LumiMotion Experiment 1, Stage 0).** The finding above
+> was accurate when written and is **now out of date.** `--probe_src` **is
+> implemented** in RadioGS at commit `ff1d1c5` ("Finalise handover: apply review
+> corrections, implement --probe_src"), branch `audit-notes`:
+> `scripts_local/phase3b/observability.py:275-279` defines the flag and
+> `:280-282` the companion `--probe_cams`; `:324-359` is the scoring branch,
+> including the probe-camera gate that refuses to score unless the rebuilt test
+> cameras reproduce Scene's own (`:338-352`) and the `prefix="train"` dispatch into
+> `sh_error` (`:357-359`). `verify_probe_cams` is at `:107-120`.
+>
+> The original A1 text is retained above rather than deleted, because the
+> distinction matters: it records a real gap that was closed, not an error in the
+> review. What remains true is that `run_probe_views.sh` has still **never been
+> run** — the render job is outstanding, only the scoring path is now present.
+>
+> Not load-bearing for LumiMotion Experiment 1; recorded so it is not re-derived.
+> Source: `docs/exp1_stage0_findings.md` §9.
 
 ### A2. The groove diffuse arm is 1/4 complete
 

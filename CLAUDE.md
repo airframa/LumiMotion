@@ -11,10 +11,14 @@ This worktree pursues **one** research direction. Read, in order:
 3. `docs/direction_proposal.md` — the direction this worktree exists to test.
 4. `docs/exp1_coverage_under_deformation_brief.md` — the current task, with its
    pre-registration.
+5. `docs/exp1_prereg_amendment_2.md` — **supersedes §2 of the brief.** The
+   predictions, port parameters, canonical-pose decision and fail-branch live
+   here. Where it conflicts with the brief, the amendment wins.
+6. `docs/exp1_stage0_findings.md` — Stage 0 answers, the basis for the amendment.
 
 This file is operational only: ground rules, layout, footguns, assets.
 
-⚠️ If any of those four files is missing from `docs/`, **stop and say so.** Do not
+⚠️ If any of those six files is missing from `docs/`, **stop and say so.** Do not
 proceed from this file alone — it deliberately does not restate their content.
 
 ---
@@ -31,8 +35,7 @@ from, write to, or reason about the sibling worktree.** It is an unrelated
 direction and cross-contamination between them is the specific thing this
 structure exists to prevent.
 
-⚠️ **Worktrees share one object store and one conda environment.** Two
-consequences, both silent:
+⚠️ **Worktrees share one object store and one conda environment.**
 
 - **Compiled CUDA extensions are installed into the `lumimotion` env, not into a
   worktree.** If either branch rebuilds a submodule (rasterizer, tracer), *both*
@@ -40,8 +43,18 @@ consequences, both silent:
   numerical result, confirm the installed extension matches this worktree's
   submodule source. If a rebuild is ever needed, say so and stop — do not rebuild
   unprompted.
-- **Submodules are not independently checked out per worktree** on all git
-  versions. Verify `submodules/` state here rather than assuming.
+  *Checked 2026-08-23:* `surfel_tracer` is pip-installed into the env
+  (`_C.cpython-38-x86_64-linux-gnu.so`, built 2026-08-07, predating both worktree
+  checkouts). The only file under `submodules/` differing between
+  `lumimotion-observability` and `constitutive-appearance` is
+  `simple-knn/simple_knn.egg-info/PKG-INFO` — build metadata. **The tracer source
+  is branch-invariant**, so a sibling rebuild cannot have changed the trace kernel.
+  This bounds the risk; it does not prove the `.so` matches current source.
+
+Note: `submodules/` here are **plain tracked files, not git submodules**
+(`.gitmodules` is empty; 1,543 tracked files; no nested `.git`). Each worktree
+gets its own checkout, and they are not inherently dirty. `git add .` is still
+banned — but for the ordinary reason, not a submodule-specific one.
 
 ---
 
@@ -147,6 +160,12 @@ restores the broken version.
 **Disk.** Data and outputs live on `/data` via symlinks. `/` filled once and killed
 a training run mid-flight.
 
+⚠️ **`cfg_args` points at the sibling worktree.** Both trained models record
+`source_path='/home/fmb/projects/LumiMotion/data/...'`. `get_combined_args` will
+use that path unless `-s` is passed explicitly. **Always pass `-s` explicitly** —
+otherwise every script silently reads data through the sibling worktree, in direct
+violation of the layout rule above. (`docs/exp1_stage0_findings.md` §9.)
+
 **Git.** conda shadows OpenSSL → use the `gitssh` alias
 (`LD_LIBRARY_PATH= GIT_SSH_COMMAND=/usr/bin/ssh git`) for push/pull/fetch; plain
 `git` for local ops.
@@ -155,21 +174,24 @@ a training run mid-flight.
 
 ## Key locations
 
-⚠️ **The paths below marked `[verify]` were carried over from campaign documents
-and have not been confirmed against this worktree. Confirm before citing, and
-correct this file when you do.**
+All paths below were confirmed against this worktree in Stage 0
+(`docs/exp1_stage0_findings.md` §9, 2026-08-23). Line numbers verified.
 
 | what | where |
 |---|---|
-| BVH bug — NVS eval | `eval_nvs_dynamic.py:69,86-88` |
-| BVH bug — relight eval | `eval_relight_dynamic.py:80,97-99` |
-| correct BVH handling | `train_stage2.py:155-159` |
-| canonical SH radiance bank | `_albedo_dc_stage1` [verify location] |
-| learned dynamic/static split | `get_binary_feature()` [verify location] |
-| Blender source scenes | `blend_files/` |
+| BVH bug — NVS eval | `scripts/eval_nvs_dynamic.py:69,86-88` |
+| BVH bug — relight eval | `scripts/eval_relight_dynamic.py:80,97-99` |
+| correct BVH handling | `scripts/train_stage2.py:155-159` |
+| canonical SH radiance bank | `scene/gaussian_model.py:411` (consumed at `gaussian_renderer/render_ir.py:149`) |
+| learned dynamic/static split | `scene/gaussian_model.py:179-197` (`get_binary_feature()`) |
+| model's own visibility function | `gaussian_renderer/render_ir.py:503-508` (`1 - trace_alpha`) |
+| Blender source scenes | `blend_files/blendfiles_v5_specular32` |
 | our instrumentation | `scripts_local/` |
 | interior scene (Test 2) | `scripts_local/test2/` |
 | campaign records | `docs/` |
+| trained model — jumpingjacks | `/data/fmb/lumimotion/outputs_test1/chapelday_goldenbay/jumpingjacks150_v5_spec32_r2_mlp` (iter 55000, N=146,400) |
+| trained model — standup | `/data/fmb/lumimotion/outputs_test1/chapelday_goldenbay/standup150_v5_spec32_r2_mlp` (iter 55000, N=156,893) |
+| scene data | `data/d-nerf-relight-spec32/{jumpingjacks,standup}150_v5_spec32` |
 
 **Coverage statistic** is defined by `scripts_local/phase3b/observability.py` in
 the **RadioGS** repo (branch `audit-notes`), not here. Port it; do not
@@ -202,10 +224,14 @@ driver (2.7–5×), not the render setting** (`db` 1→8 is worth only +7%).
 
 ## Current status
 
-**Experiment 1 (coverage under deformation) is registered and not yet run.**
-It has a **read-only Stage 0 with a stop-gate** — six questions answered with
-`file:line`, reported back before any code is written. Stage 0 answers may change
-the design, so do not skip ahead to Stage 1.
+**Experiment 1 (coverage under deformation): Stage 0 complete.**
+Stage 0 was a read-only stop-gate — **seven** questions answered with `file:line`
+(`docs/exp1_stage0_findings.md`). Its findings changed the design, so the
+pre-registration was amended: **`docs/exp1_prereg_amendment_2.md` supersedes §2 of
+the brief** and fixes the predictions (P1/P2 adjudicated on the dynamic stratum,
+new P3 rescue-rate test), the port parameters, the canonical-pose decision
+(`d_xyz = d_rotation = 0`) and the fail-branch. Read the amendment, not just the
+brief.
 
 Nothing in this direction is established. The problem statement is measured
 (`HANDOVER.md` §5.2); the direction's central geometric precondition is not.
