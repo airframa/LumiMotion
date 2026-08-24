@@ -79,6 +79,7 @@ Attach to monitor it:
 
 ```bash
 tmux attach -t constitutive-deformation-regime
+tail -f /home/fmb/projects/LumiMotion/outputs_constitutive/deformation_regime_v1/full_run.log
 ```
 
 This command processes all four frozen scenes, with references `hook=1`, `jumpingjacks=1`, `mouse=1`, `standup=75`, and every integer target frame 1–150. It invokes the frozen `/home/fmb/blender-3.6.13-linux-x64/blender` with background mode and auto-execution disabled. It performs geometry extraction only; it does not render or save a `.blend` file.
