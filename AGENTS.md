@@ -164,9 +164,9 @@ Current project sequence:
 ```text
 LumiMotion substrate audit          [DONE]
     ->
-strain-interface specification      [CURRENT]
+strain-interface specification      [DONE]
     ->
-validated mesh strain extraction
+validated mesh strain extraction    [CURRENT]
     ->
 measure available deformation regime
     ->
@@ -179,9 +179,8 @@ minimal LumiMotion prototype
 anisotropic/material-frame extension if justified
 ```
 
-The immediate task is the **strain-interface specification**.
-
-Do not implement the strain extractor yet.
+Implement Path A only. Path B Gaussian-neighbour strain remains specified but
+is deferred until the physical/signal gate justifies method development.
 
 Do not modify LumiMotion training yet.
 
