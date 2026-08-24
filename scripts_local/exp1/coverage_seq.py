@@ -157,7 +157,9 @@ def run_arm(g, deform, bfeat, cams, fids, light_t_min, arm, guard_report):
         if arm == "rigid":
             d_xyz, d_rotation, d_scaling = zeros3, zeros4, zeros2
         else:
-            t = torch.full((N, 1), float(fids[j]), device="cuda", dtype=torch.float32)
+            # train_stage2.py:144 feeds the camera's own fid; fids[j] is already
+            # its float32 image (asserted in load_train_fids), so these coincide.
+            t = cam.fid.to("cuda").view(1, 1).expand(N, 1).contiguous()
             dv = deform.step(xyz0, t, feature=bfeat)
             d_xyz, d_rotation = dv["d_xyz"], dv["d_rotation"]
             d_scaling = dv["d_scaling"]
@@ -202,10 +204,15 @@ def load_train_fids(source_path, cams):
     fids = np.asarray([f["time"] for f in frames], dtype=np.float64)
     assert len(cams) == len(fids), \
         f"Scene built {len(cams)} train cameras, transforms_train.json has {len(fids)}"
+    # Camera.fid is stored float32 (cameras.py:46). Assert the EXACT identity
+    # cam.fid == float32(json time), elementwise -- stronger than a tolerance, and
+    # it pins both the values and their order. A float64 comparison would fail on
+    # storage precision alone (max |diff| 2.94e-08) and say nothing about ordering.
     got = np.asarray([float(c.fid.item()) for c in cams], dtype=np.float64)
-    assert np.allclose(got, fids, atol=0, rtol=0), \
-        "camera fid order does not match transforms_train.json order"
-    return fids
+    want = fids.astype(np.float32).astype(np.float64)
+    assert np.array_equal(got, want), \
+        "camera fid order/values do not match transforms_train.json"
+    return want
 
 
 if __name__ == "__main__":

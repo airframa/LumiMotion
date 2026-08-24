@@ -260,6 +260,13 @@ quaternions itself, derives the surfel normal as the third column of R, and
 transcribes the alpha semantics from
 `submodules/surfel_tracer/src/optix/gaussiantrace_forward.cu:55-105`.
 
+> ⚠️ **Corrected 2026-08-24 by Task A** (`docs/exp1_taskA_deformed_gate.md` §5).
+> Fact 1 below is sound on order-independence but its conclusion that the 16-hit
+> buffer *"cannot change the mask"* is **wrong**. Overflow does not merely drop
+> hits — it can double-count the Gaussian at the chunk boundary. That changed the
+> mask on 2 of 270,000 gated cells and perturbs `vis` on 17–27% of rays. See the
+> Task A document for the measurement.
+
 **Two facts derived from the kernel that make brute force tractable and valid:**
 
 1. `O += T*alpha` with `T *= (1-alpha)` gives `O = 1 − Π(1−αᵢ)` **exactly**, so

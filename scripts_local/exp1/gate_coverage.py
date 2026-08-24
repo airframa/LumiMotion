@@ -9,6 +9,14 @@
 # compiled OptiX submodule in both repos, so the port cannot be run against
 # observability.py's own output on a groove rung.
 #
+# ARMS. --deform_label "" (default) gates the STATIC configuration, which is the
+# C_rigid arm. --deform_label r_0142 gates a DEFORMED frame, i.e. the C_seq arm,
+# required by `docs/exp1_prereg_addendum_1.md` sec A: Stage 1 gated only the
+# control, and BVHGuard checks a consistency invariant on the call pattern rather
+# than independently verifying the deformed-path numbers. Everything else is
+# unchanged -- same 500 Gaussians, same seed, same brute force including the
+# d_g^2 < 1e-6 clamp rejection, same exact-agreement pass condition.
+#
 # WHAT IS INDEPENDENT HERE. This file shares no helper with coverage_seq.py and
 # does not call GaussianModel. It reads the PLY directly, applies the activations
 # itself, builds the rotation matrices itself, and derives the surfel normal, ru/rv
@@ -83,7 +91,7 @@ import torch
 from plyfile import PlyData
 
 sys.path.insert(0, os.getcwd())
-from scene import Scene, GaussianModel
+from scene import Scene, GaussianModel, DeformModel
 from arguments import ModelParams, PipelineParams, get_combined_args
 from utils.general_utils import safe_state
 
@@ -125,6 +133,9 @@ if __name__ == "__main__":
     pipeline = PipelineParams(parser)
     parser.add_argument("--iteration", default=55000, type=int)
     parser.add_argument("--n_sample", default=N_SAMPLE, type=int)
+    parser.add_argument("--deform_label", default="",
+                        help="train frame file_path label (e.g. r_0142) to gate the "
+                             "DEFORMED C_seq arm. Empty = static C_rigid arm.")
     parser.add_argument("--quiet", action="store_true")
     args = get_combined_args(parser)
     safe_state(args.quiet)
@@ -140,21 +151,65 @@ if __name__ == "__main__":
         cams = scene.getTrainCameras()
         N, C = g.get_xyz.shape[0], len(cams)
 
-        # STATIC model, per brief sec 5(b): canonical geometry, no deformation.
         zeros3 = torch.zeros_like(g.get_xyz)
         zeros4 = torch.zeros((N, 4), device="cuda")
         zeros2 = torch.zeros((N, 2), device="cuda")
-        g.build_bvh(d_rotation=zeros4, d_xyz=zeros3, d_scaling=zeros2)
+
+        if not args.deform_label:
+            # STATIC, per brief sec 5(b). This is exactly the C_rigid arm.
+            arm = "static (C_rigid)"
+            d_xyz, d_rotation, d_scaling = zeros3, zeros4, zeros2
+            frame_idx = -1
+        else:
+            # DEFORMED, per addendum sec A. This is the C_seq arm.
+            with open(os.path.join(dataset.source_path, "transforms_train.json")) as f:
+                frames = json.load(f)["frames"]
+            labels = [fr["file_path"] for fr in frames]
+            assert args.deform_label in labels, \
+                f"{args.deform_label} not among the {len(labels)} train frames"
+            frame_idx = labels.index(args.deform_label)
+            # Camera.fid is stored float32 (cameras.py:46), so it is the float32
+            # image of the JSON time. Assert that EXACT identity -- stronger than a
+            # tolerance, and it is the invariant that actually matters: the camera
+            # at this index carries this frame's time.
+            fid_json = float(frames[frame_idx]["time"])
+            fid = float(np.float32(fid_json))
+            assert float(cams[frame_idx].fid.item()) == fid, (
+                f"camera fid {cams[frame_idx].fid.item()!r} != float32(json time) "
+                f"{fid!r} at index {frame_idx}")
+            # feed the model the camera's own fid, as train_stage2.py:144 does
+            fid = float(cams[frame_idx].fid.item())
+
+            deform = DeformModel(deform_type=dataset.deform_type,
+                                 is_blender=dataset.is_blender,
+                                 hyper_dim=dataset.hyper_dim,
+                                 pred_color=dataset.pred_color)
+            assert deform.load_weights(dataset.model_path, iteration=args.iteration)
+            bfeat = g.get_binary_feature()
+            t = torch.full((N, 1), fid, device="cuda", dtype=torch.float32)
+            dv = deform.step(g.get_xyz.detach(), t, feature=bfeat)
+            d_xyz, d_rotation, d_scaling = dv["d_xyz"], dv["d_rotation"], dv["d_scaling"]
+
+            # addendum sec A selects the per-time maximum of median ||d_xyz|| over the
+            # dynamic set. Verify that criterion rather than trusting the label.
+            dyn = bfeat[:, 0] > 0.5
+            med = float(d_xyz[dyn].norm(dim=-1).median())
+            arm = (f"deformed (C_seq) frame {args.deform_label} "
+                   f"idx {frame_idx} t={fid:.6f}")
+            print(f"[gate] {arm}: median ||d_xyz|| over dynamic set = {med:.6f}")
+            assert med > 0, "the deformed arm did not deform"
+
+        g.build_bvh(d_rotation=d_rotation, d_xyz=d_xyz, d_scaling=d_scaling)
 
         sys.path.insert(0, os.path.join(os.getcwd(), "scripts_local/exp1"))
         from coverage_seq import coverage_frame, deformed_geometry
-        xyz, scales, rotation, opacity = deformed_geometry(g, zeros3, zeros4, zeros2)
+        xyz, scales, rotation, opacity = deformed_geometry(g, d_xyz, d_rotation, d_scaling)
 
         rng = np.random.default_rng(SEED)
         sel = np.sort(rng.choice(N, size=args.n_sample, replace=False))
         sel_t = torch.from_numpy(sel).cuda()
 
-        print(f"[gate] N={N} C={C} sample={len(sel)} seed={SEED}")
+        print(f"[gate] N={N} C={C} sample={len(sel)} seed={SEED} arm={arm}")
         print(f"[gate] back_culling=False light_t_min={pipe.light_t_min} "
               f"alpha_min={g.alpha_min} transmittance_min="
               f"{g.gaussian_tracer.transmittance_min} thr={THR}")
@@ -185,9 +240,17 @@ if __name__ == "__main__":
     #   opacity  sigmoid   (gaussian_model.py:88)
     #   scaling  exp       (gaussian_model.py:81)
     #   rotation normalize (gaussian_model.py:90)
-    o_bf = 1.0 / (1.0 + np.exp(-opa_r))                       # (N,1)
-    s_bf = np.exp(sca_r)                                      # (N,2)
-    R_bf = quat_to_R(rot_r)                                   # (N,3,3)
+    # The deformation deltas are DATA here, exactly as the PLY is data. The
+    # activations and the deformed-geometry assembly are re-derived from source
+    # (gaussian_model.py:81,88,151-153; render_ir.py:79,96-97) rather than taken
+    # from deformed_geometry(), so no helper is shared with the port.
+    dx_r = d_xyz.double().cpu().numpy()
+    dr_r = d_rotation.double().cpu().numpy()
+    ds_r = d_scaling.double().cpu().numpy()
+    xyz_r = xyz_r + dx_r                                      # get_xyz + d_xyz
+    o_bf = 1.0 / (1.0 + np.exp(-opa_r))                       # sigmoid(_opacity)
+    s_bf = np.exp(sca_r) + ds_r                               # exp(_scaling) + d_scaling
+    R_bf = quat_to_R(rot_r + dr_r)                            # normalize(_rotation + d_rot)
     n_bf = R_bf[:, :, 2]                                      # third column
     n_bf = n_bf / np.linalg.norm(n_bf, axis=1, keepdims=True)
     eps = 1e-7
@@ -262,6 +325,7 @@ if __name__ == "__main__":
     nd = int(dis.sum())
     print("\n" + "=" * 66)
     print(f"GATE (b) -- exact agreement on the boolean coverage mask")
+    print(f"  arm                 : {arm}")
     print(f"  mask cells compared : {ref.numel()} ({S} Gaussians x {C} cameras)")
     print(f"  clamp-artefact hits rejected (d_g^2 < 1e-6, cu:76): {n_clamped[0]} "
           f"of {Rays * N} pairs ({100.0*n_clamped[0]/(Rays*N):.3e}%)")
