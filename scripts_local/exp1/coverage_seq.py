@@ -36,6 +36,37 @@
 # frame-0 BVH would drive C_seq onto C_rigid and read as a clean falsification
 # (docs/exp1_stage0_findings.md Q2, brief sec 4).
 #
+# EXPOSURE INSTRUMENTATION (docs/exp1_prereg_addendum_2.md sec B). LumiMotion's
+# tracer double-counts the chunk-boundary Gaussian when a ray crosses more than
+# MAX_BUFFER_SIZE = 16 bounding volumes (auxiliary.h:10; diagnosed in
+# docs/exp1_taskA_deformed_gate.md). The pooled exposure table says nothing about
+# the BOTTOM C_rigid DECILE, which is where P1/P2 adjudicate and which is plausibly
+# the most overflow-exposed population in the scene, since a ray is occluded
+# precisely because it crosses a lot of geometry. So exposure is recorded here, at
+# full population, and reported per decile.
+#
+#   DUMP FORMAT, and why (sec B allows per-Gaussian summaries where they suffice):
+#     xings_{arm}{tag}   (N, C) uint16  per-CELL bounding-volume crossing count.
+#         Stored per cell because sec B asks for the DISTRIBUTION (median/p90/p99/
+#         max) of crossing counts within a decile. That is a distribution over rays
+#         and per-Gaussian summaries cannot reconstruct it. This is raw, unaggregated
+#         (brief sec 6).
+#     frag_{arm}{tag}    (N, 3) int32   per-Gaussian count of GATED cells with
+#         |vis - 0.5| < delta, delta in {1e-3, 1e-2, 5e-2}.
+#     gated_{arm}{tag}   (N,)   int32   per-Gaussian count of cells with infr & face.
+#         This is the fragility DENOMINATOR: a cell failing infr or face contributes
+#         False to the mask whatever vis does, so no vis perturbation can flip it.
+#         Stored so both denominators (gated, and all N*C) are available.
+#   Deciles and the dynamic/static strata are per-Gaussian properties, so the
+#   per-Gaussian counts re-aggregate exactly into any decile x stratum breakdown.
+#   Per-cell `vis` is NOT stored: the only questions asked of it are
+#   threshold-distance counts, computed exactly in-loop, and storing it would add
+#   ~79 MB per arm per t_scale for nothing.
+#
+#   The crossing test uses the icosahedron CIRCUMSCRIBED radius, 1.2584 * sqrt(2
+#   ln(opacity/alpha_min)) in p_g units (gaussian_model.py:99,618), so it is an
+#   upper bound on the true crossing count -- conservative for an exposure measure.
+#
 #   python scripts_local/exp1/coverage_seq.py \
 #       --model_path /data/fmb/lumimotion/outputs_test1/chapelday_goldenbay/jumpingjacks150_v5_spec32_r2_mlp \
 #       --source_path $PWD/data/d-nerf-relight-spec32/jumpingjacks150_v5_spec32 \
@@ -51,11 +82,15 @@ import torch
 sys.path.insert(0, os.getcwd())
 from scene import Scene, GaussianModel, DeformModel
 from arguments import ModelParams, PipelineParams, get_combined_args
-from utils.general_utils import safe_state
+from utils.general_utils import safe_state, build_rotation
 
 THR = 0.5
 BACK_CULLING = False
 T_SCALES = (1.0, 3.0)
+FRAG_DELTAS = (1e-3, 1e-2, 5e-2)   # addendum 2 sec B.2
+ICOSA_CIRCUM = 1.2584              # gaussian_model.py:99
+T_SCENE_MAX = 100.0                # auxiliary.h:11
+XING_CHUNK = 1024                  # rays per chunk in the exposure pass
 
 
 class BVHGuard:
@@ -133,7 +168,52 @@ def coverage_frame(g, cam, xyz, scales, rotation, opacity,
 
 
 @torch.no_grad()
-def run_arm(g, deform, bfeat, cams, fids, light_t_min, arm, guard_report):
+def crossing_counts(g, mu, scales, rotation, opacity, cam, light_t_min, t_scale,
+                    chunk=XING_CHUNK):
+    """(N,) count of bounding volumes each ray crosses, for one camera.
+
+    Replicates the BVH's geometric acceptance, not the tracer's: a ray enters
+    Gaussian j's bounding icosahedron when its surfel-plane intersection lies
+    within the circumscribed radius and the hit is in front of the origin. This is
+    what consumes anyhit buffer slots -- note the kernel assigns t_curr at
+    gaussiantrace_forward.cu:58 BEFORE the alpha < alpha_min test at :79, so hits
+    contributing no alpha still advance the chunk boundary.
+    """
+    N = mu.shape[0]
+    eps = 1e-7
+    inv_s = 1.0 / (scales + eps * (scales == 0).float())
+    R = build_rotation(rotation)
+    ru = R[:, :, 0] * inv_s[:, 0:1]
+    rv = R[:, :, 1] * inv_s[:, 1:2]
+    splat2world = g.get_covariance(xyz=mu, scales=scales, rotation=rotation)
+    nrm = torch.nn.functional.normalize(splat2world[:, 2, :3], dim=-1)
+    sup2 = (ICOSA_CIRCUM ** 2) * 2.0 * torch.log(opacity[:, 0] / g.alpha_min)
+
+    n_mu = (nrm * mu).sum(1)
+    ru_mu = (ru * mu).sum(1)
+    rv_mu = (rv * mu).sum(1)
+
+    v = cam.camera_center - mu
+    d = v / v.norm(dim=-1, keepdim=True).clamp_min(1e-8)
+    ro = mu + t_scale * light_t_min * d
+
+    out = torch.zeros(N, dtype=torch.int32, device="cuda")
+    for a in range(0, N, chunk):
+        b = min(a + chunk, N)
+        O, D = ro[a:b], d[a:b]
+        o_g = O @ nrm.T - n_mu[None, :]
+        d_g = D @ nrm.T
+        dd = -o_g * d_g / torch.clamp(d_g * d_g, min=1e-6)
+        pu = (O @ ru.T) + dd * (D @ ru.T) - ru_mu[None, :]
+        pv = (O @ rv.T) + dd * (D @ rv.T) - rv_mu[None, :]
+        hit = ((pu * pu + pv * pv) <= sup2[None, :]) & (dd > 0) & (dd < T_SCENE_MAX)
+        out[a:b] = hit.sum(1).int()
+    return out
+
+
+@torch.no_grad()
+def run_arm(g, deform, bfeat, cams, fids, light_t_min, arm, guard_report,
+            exposure=True):
     """One arm over all frames. Returns per-t_scale (N,C) boolean masks.
 
     arm == "rigid": d_xyz = d_rotation = d_scaling = 0 exactly, every frame.
@@ -146,10 +226,21 @@ def run_arm(g, deform, bfeat, cams, fids, light_t_min, arm, guard_report):
     zeros2 = torch.zeros((N, 2), device="cuda")
 
     ok = {ts: torch.zeros(N, C, dtype=torch.bool, device="cuda") for ts in T_SCALES}
+    xings = {ts: torch.zeros(N, C, dtype=torch.int16, device="cuda") for ts in T_SCALES} \
+        if exposure else {}
+    frag = {ts: torch.zeros(N, len(FRAG_DELTAS), dtype=torch.int32, device="cuda")
+            for ts in T_SCALES}
+    gated = {ts: torch.zeros(N, dtype=torch.int32, device="cuda") for ts in T_SCALES}
     vis_sum = torch.zeros(N, device="cuda")
     infr_sum = torch.zeros(N, dtype=torch.int32, device="cuda")
     face_sum = torch.zeros(N, dtype=torch.int32, device="cuda")
+    # Displacement sanity (brief sec 4). Recorded on the DYNAMIC set as well as
+    # pooled: 78% of Gaussians are static, so the POOLED median sits inside that
+    # block and reads ~0 whatever the deformation does -- uninformative, and it
+    # very nearly fired a false "did not deform" alarm. HANDOVER.md sec 9.2.
     disp = torch.zeros(C, device="cuda")
+    disp_dyn = torch.zeros(C, device="cuda")
+    dynmask = bfeat[:, 0] > 0.5
 
     guard = BVHGuard()
     built = False
@@ -163,7 +254,9 @@ def run_arm(g, deform, bfeat, cams, fids, light_t_min, arm, guard_report):
             dv = deform.step(xyz0, t, feature=bfeat)
             d_xyz, d_rotation = dv["d_xyz"], dv["d_rotation"]
             d_scaling = dv["d_scaling"]
-        disp[j] = d_xyz.norm(dim=-1).median()
+        dn_ = d_xyz.norm(dim=-1)
+        disp[j] = dn_.median()
+        disp_dyn[j] = dn_[dynmask].median()
 
         # --- BVH, per scripts/train_stage2.py:155-159 -------------------------
         if not built:
@@ -180,7 +273,18 @@ def run_arm(g, deform, bfeat, cams, fids, light_t_min, arm, guard_report):
         for ts in T_SCALES:
             vis, infr, face, _ = coverage_frame(g, cam, xyz, scales, rotation,
                                                 opacity, light_t_min, ts)
-            ok[ts][:, j] = (vis > THR) & infr & face
+            gate = infr & face
+            ok[ts][:, j] = (vis > THR) & gate
+            # mask fragility: only cells whose mask value is DECIDED by vis can be
+            # flipped by a vis perturbation, so the denominator is `gate`
+            gated[ts] += gate.int()
+            dv_ = (vis - THR).abs()
+            for k, dl in enumerate(FRAG_DELTAS):
+                frag[ts][:, k] += (gate & (dv_ < dl)).int()
+            if exposure:
+                xings[ts][:, j] = crossing_counts(
+                    g, xyz, scales, rotation, opacity, cam, light_t_min, ts
+                ).clamp_(max=32767).short()
             if ts == 1.0:
                 vis_sum += vis * infr * face
                 infr_sum += infr.int()
@@ -191,7 +295,7 @@ def run_arm(g, deform, bfeat, cams, fids, light_t_min, arm, guard_report):
     guard_report[arm] = guard._frames_built
     assert guard._frames_built == C, \
         f"{arm}: BVH refit {guard._frames_built} times for {C} frames"
-    return ok, vis_sum, infr_sum, face_sum, disp
+    return ok, vis_sum, infr_sum, face_sum, disp, xings, frag, gated, disp_dyn
 
 
 def load_train_fids(source_path, cams):
@@ -221,6 +325,11 @@ if __name__ == "__main__":
     pipeline = PipelineParams(parser)
     parser.add_argument("--iteration", default=55000, type=int)
     parser.add_argument("--out", default="")
+    parser.add_argument("--max_frames", default=0, type=int,
+                        help="smoke-test only: limit the camera count. NOT for the "
+                             "registered run, which uses all 135.")
+    parser.add_argument("--no_exposure", action="store_true",
+                        help="skip the addendum 2 sec B crossing-count pass")
     parser.add_argument("--quiet", action="store_true")
     args = get_combined_args(parser)
     safe_state(args.quiet)
@@ -253,6 +362,9 @@ if __name__ == "__main__":
 
         cams = scene.getTrainCameras()
         fids = load_train_fids(dataset.source_path, cams)
+        if args.max_frames:
+            print(f"  *** SMOKE TEST: {args.max_frames} of {len(cams)} cameras ***")
+            cams, fids = cams[:args.max_frames], fids[:args.max_frames]
         N, C = g.get_xyz.shape[0], len(cams)
         bfeat = g.get_binary_feature()
         dyn = (bfeat[:, 0] > 0.5)
@@ -269,15 +381,24 @@ if __name__ == "__main__":
         for arm in ("rigid", "seq"):
             print(f"  arm: {arm}")
             res[arm] = run_arm(g, deform, bfeat, cams, fids,
-                               pipe.light_t_min, arm, guard_report)
+                               pipe.light_t_min, arm, guard_report,
+                               exposure=not args.no_exposure)
 
         # brief sec 4 / HANDOVER.md sec 9.7 -- assert the arms actually differ
-        d_rigid, d_seq = res["rigid"][4], res["seq"][4]
+        d_rigid, d_seq = res["rigid"][8], res["seq"][8]          # dynamic-set medians
+        p_rigid, p_seq = res["rigid"][4], res["seq"][4]          # pooled medians
         assert float(d_rigid.abs().max()) == 0.0, "C_rigid arm displaced something"
-        assert float(d_seq.max()) > 0.0, "C_seq arm did not deform"
-        print(f"  displacement sanity: rigid max {float(d_rigid.abs().max()):.3e}, "
-              f"seq per-frame median in [{float(d_seq.min()):.4f}, "
-              f"{float(d_seq.max()):.4f}]")
+        assert float(p_rigid.abs().max()) == 0.0, "C_rigid arm displaced something"
+        assert float(d_seq.min()) > 0.0, \
+            "C_seq arm did not deform on the dynamic set in some frame"
+        print(f"  displacement sanity (brief sec 4):")
+        print(f"    rigid: max over frames of |median| = {float(d_rigid.abs().max()):.3e} "
+              f"(dynamic set), {float(p_rigid.abs().max()):.3e} (pooled)")
+        print(f"    seq  : per-frame median over DYNAMIC set in "
+              f"[{float(d_seq.min()):.4f}, {float(d_seq.max()):.4f}]")
+        print(f"    seq  : per-frame median over POOLED set in "
+              f"[{float(p_seq.min()):.3e}, {float(p_seq.max()):.3e}] "
+              f"-- ~0 by construction, 78% of Gaussians are static")
 
         out = args.out or os.path.join(
             "docs", "exp1_assets",
@@ -295,12 +416,15 @@ if __name__ == "__main__":
                                    alpha_min=g.alpha_min,
                                    transmittance_min=g.gaussian_tracer.transmittance_min,
                                    thr=THR, t_scales=list(T_SCALES),
+                                   frag_deltas=list(FRAG_DELTAS),
+                                   icosa_circum=ICOSA_CIRCUM,
+                                   max_buffer_size=16,
                                    iteration=args.iteration,
                                    model_path=dataset.model_path,
                                    source_path=dataset.source_path)),
         )
         for arm in ("rigid", "seq"):
-            ok, vis_sum, infr_sum, face_sum, disp = res[arm]
+            ok, vis_sum, infr_sum, face_sum, disp, xings, frag, gated, disp_dyn = res[arm]
             for ts in T_SCALES:
                 tag = "" if ts == 1.0 else "_t3"
                 # RAW per-camera mask, not aggregated (brief sec 6). C_single for
@@ -308,10 +432,17 @@ if __name__ == "__main__":
                 payload[f"ok_{arm}{tag}"] = np.packbits(
                     ok[ts].cpu().numpy(), axis=1)
                 payload[f"n_views_{arm}{tag}"] = ok[ts].sum(1).cpu().numpy().astype(np.int32)
+            for ts in T_SCALES:
+                tag = "" if ts == 1.0 else "_t3"
+                if xings:
+                    payload[f"xings_{arm}{tag}"] = xings[ts].cpu().numpy().astype(np.uint16)
+                payload[f"frag_{arm}{tag}"] = frag[ts].cpu().numpy()
+                payload[f"gated_{arm}{tag}"] = gated[ts].cpu().numpy()
             payload[f"vis_sum_{arm}"] = vis_sum.cpu().numpy()
             payload[f"infr_sum_{arm}"] = infr_sum.cpu().numpy()
             payload[f"face_sum_{arm}"] = face_sum.cpu().numpy()
             payload[f"disp_median_per_frame_{arm}"] = disp.cpu().numpy()
+            payload[f"disp_median_per_frame_dyn_{arm}"] = disp_dyn.cpu().numpy()
         np.savez_compressed(out, **payload)
         print(f"  BVH refits per arm: {guard_report}")
         print(f"  wrote {out}")
