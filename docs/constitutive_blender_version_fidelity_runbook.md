@@ -13,8 +13,18 @@ object-selection rule, frame schedule, Path-A definition, statistics,
 tolerances, or PASS/PARTIAL/FAIL rules. This is an evaluated-geometry and strain
 fidelity check, not Gate 1, rendering, training, or an appearance experiment.
 
-The full four-scene Blender 4.4.0 extraction was not launched while preparing
-this runbook. No Joanna `.blend` file was opened.
+The full four-scene Blender 4.4.0 fidelity extraction has not yet completed.
+
+A first execution attempt under
+`outputs_constitutive/blender_version_fidelity_v1/` opened all four frozen
+Joanna `.blend` assets read-only under Blender 4.4.0, but failed at Blender-worker
+CLI dispatch before geometry extraction or Path-A strain computation. It produced
+no scientific fidelity verdict and is preserved as immutable failed-execution
+evidence.
+
+During preparation of the corrected v2 pipeline, no Joanna `.blend` asset was
+opened. The real Blender-hosted worker-dispatch boundary was tested only with
+`--factory-startup` and no source asset.
 
 ## 2. Immutable baseline
 
@@ -41,10 +51,21 @@ error, not permission to regenerate it.
 
 ## 3. Private Blender 4.4.0 output
 
+The first attempted output is immutable failed execution evidence:
+
+```text
+outputs_constitutive/blender_version_fidelity_v1
+```
+
+**v1 = execution failure before strain extraction:** Blender worker CLI
+dispatch incorrectly parsed Blender host arguments. It produced no scientific
+fidelity verdict. Do not modify, delete, resume, overwrite, analyze as a
+completed comparison, or reuse v1.
+
 The new output root is:
 
 ```text
-/home/fmb/projects/LumiMotion/outputs_constitutive/blender_version_fidelity_v1
+/home/fmb/projects/LumiMotion/outputs_constitutive/blender_version_fidelity_v2
 ```
 
 The repository path `outputs_constitutive` is an existing symlink to
@@ -56,7 +77,7 @@ not force-add, upload, or redistribute its evaluated geometry packages.
 Expected structure after extraction and analysis:
 
 ```text
-outputs_constitutive/blender_version_fidelity_v1/
+outputs_constitutive/blender_version_fidelity_v2/
 ├── full_run.log
 ├── run_manifest.json
 ├── deformation_regime_summary.json
@@ -107,13 +128,13 @@ execution disabled. Neither new script calls a Blender save or render operator.
 Run from any directory:
 
 ```bash
-tmux new-session -d -s constitutive-blender-fidelity "/bin/bash -lc 'mkdir -p /home/fmb/projects/LumiMotion/outputs_constitutive/blender_version_fidelity_v1 && /home/fmb/miniconda3/envs/lumimotion/bin/python /home/fmb/projects/LumiMotion/scripts_local/constitutive/strain/run_blender_version_fidelity.py --output-root /home/fmb/projects/LumiMotion/outputs_constitutive/blender_version_fidelity_v1 >> /home/fmb/projects/LumiMotion/outputs_constitutive/blender_version_fidelity_v1/full_run.log 2>&1'"
+tmux new-session -d -s constitutive-blender-fidelity "/bin/bash -lc 'mkdir -p /home/fmb/projects/LumiMotion/outputs_constitutive/blender_version_fidelity_v2 && /home/fmb/miniconda3/envs/lumimotion/bin/python /home/fmb/projects/LumiMotion/scripts_local/constitutive/strain/run_blender_version_fidelity.py --output-root /home/fmb/projects/LumiMotion/outputs_constitutive/blender_version_fidelity_v2 >> /home/fmb/projects/LumiMotion/outputs_constitutive/blender_version_fidelity_v2/full_run.log 2>&1'"
 ```
 
 Monitor the log without modifying outputs:
 
 ```bash
-tail -f /home/fmb/projects/LumiMotion/outputs_constitutive/blender_version_fidelity_v1/full_run.log
+tail -f /home/fmb/projects/LumiMotion/outputs_constitutive/blender_version_fidelity_v2/full_run.log
 ```
 
 This command launches all four frozen scenes, with reference frames
@@ -125,7 +146,7 @@ frame 1–150. It is the long job and must be launched by the user.
 Run only after the extraction command has completed:
 
 ```bash
-/home/fmb/miniconda3/envs/lumimotion/bin/python /home/fmb/projects/LumiMotion/scripts_local/constitutive/strain/compare_blender_version_fidelity.py --comparator-root /home/fmb/projects/LumiMotion/outputs_constitutive/blender_version_fidelity_v1 --output /home/fmb/projects/LumiMotion/outputs_constitutive/blender_version_fidelity_v1/blender_version_fidelity_comparison.json
+/home/fmb/miniconda3/envs/lumimotion/bin/python /home/fmb/projects/LumiMotion/scripts_local/constitutive/strain/compare_blender_version_fidelity.py --comparator-root /home/fmb/projects/LumiMotion/outputs_constitutive/blender_version_fidelity_v2 --output /home/fmb/projects/LumiMotion/outputs_constitutive/blender_version_fidelity_v2/blender_version_fidelity_comparison.json
 ```
 
 The analyzer first independently recomputes the exact frozen deformation-regime
@@ -219,12 +240,12 @@ original verdict and creating a new preregistration version.
 
 Bring back these compact/private records after both commands finish:
 
-1. `outputs_constitutive/blender_version_fidelity_v1/full_run.log`;
-2. `outputs_constitutive/blender_version_fidelity_v1/run_manifest.json`;
+1. `outputs_constitutive/blender_version_fidelity_v2/full_run.log`;
+2. `outputs_constitutive/blender_version_fidelity_v2/run_manifest.json`;
 3. all four new `scenes/*/scene_manifest.json` files, including any unusable
    scene record;
-4. `outputs_constitutive/blender_version_fidelity_v1/deformation_regime_summary.json`;
-5. `outputs_constitutive/blender_version_fidelity_v1/blender_version_fidelity_comparison.json`;
+4. `outputs_constitutive/blender_version_fidelity_v2/deformation_regime_summary.json`;
+5. `outputs_constitutive/blender_version_fidelity_v2/blender_version_fidelity_comparison.json`;
 6. extraction and analysis exit codes.
 
 Do not copy, commit, upload, or redistribute the per-frame NPZ geometry
@@ -233,9 +254,17 @@ compact comparison evidence.
 
 ## 11. Cheap preparation checks
 
-Preparation is limited to syntax compilation, both `--help` paths, synthetic
-topology/percentile/verdict tests, a no-asset driver dry run, exact Blender
-`--version`, output-symlink/private-path verification, current source SHA-256
-verification, and immutable baseline manifest/summary SHA-256 verification.
-No actual 4.4 comparison, asset opening, geometry extraction, render, training,
-or GPU job is part of preparation.
+Preparation is limited to syntax compilation, both `--help` paths, synthetic topology/percentile/verdict tests, a no-asset driver dry run, exact Blender
+`--version`, output-symlink/private-path verification, current source SHA-256 verification, and immutable baseline manifest/summary SHA-256 verification. The failed v1 execution opened the four source assets read-only but did not reach geometry extraction or strain computation. Preparation of the corrected v2 pipeline did not open any Joanna asset; its Blender-hosted dispatch smoke test used `--factory-startup` only.
+
+After the v1 dispatch failure, the real Blender-hosted parser boundary was
+tested with factory startup and no source asset:
+
+```bash
+/home/fmb/blender-4.4.0-linux-x64/blender --background --factory-startup --python /home/fmb/projects/LumiMotion/scripts_local/constitutive/strain/run_blender_version_fidelity.py -- --blender-worker --worker-dispatch-self-test --scene-id hook --output-root /tmp/lumimotion_fidelity_dispatch_smoke
+```
+
+This returned exit code zero and explicitly reported
+`worker_dispatch_self_test: PASS`, `blender_host_arguments_ignored: true`, the
+correct post-`--` worker arguments and scene ID, `joanna_asset_accessed: false`,
+and `strain_extracted: false`. It created no comparison output package.

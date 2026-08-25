@@ -17,7 +17,7 @@ SCRIPT_PATH = Path(__file__).resolve()
 SCRIPT_DIR = SCRIPT_PATH.parent
 REPO_ROOT = SCRIPT_DIR.parents[2]
 BASELINE_ROOT = REPO_ROOT / "outputs_constitutive" / "deformation_regime_v1"
-DEFAULT_OUTPUT = REPO_ROOT / "outputs_constitutive" / "blender_version_fidelity_v1"
+DEFAULT_OUTPUT = REPO_ROOT / "outputs_constitutive" / "blender_version_fidelity_v2"
 OUTPUTS_LINK = REPO_ROOT / "outputs_constitutive"
 EXPECTED_OUTPUTS_PHYSICAL = Path("/data/fmb/LumiMotion/outputs_constitutive")
 PREREG = REPO_ROOT / "docs" / "constitutive_blender_version_fidelity_prereg.md"
@@ -158,6 +158,7 @@ def parse_args(argv=None):
         help="Verify baseline, paths, and Blender version and print commands; open no assets.",
     )
     parser.add_argument("--blender-worker", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--worker-dispatch-self-test", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "--scene-id", choices=("hook", "jumpingjacks", "mouse", "standup"), help=argparse.SUPPRESS
     )
@@ -165,7 +166,23 @@ def parse_args(argv=None):
 
 
 def main(argv=None):
-    args = parse_args(argv)
+    blender_argv = (
+        sys.argv[sys.argv.index("--") + 1 :]
+        if "bpy" in sys.modules and "--" in sys.argv
+        else argv
+    )
+    args = parse_args(blender_argv)
+    if args.blender_worker and args.worker_dispatch_self_test:
+        print(json.dumps({
+            "worker_dispatch_self_test": "PASS",
+            "blender_host_arguments_ignored": True,
+            "worker_arguments": blender_argv,
+            "scene_id": args.scene_id,
+            "output_root": str(args.output_root),
+            "joanna_asset_accessed": False,
+            "strain_extracted": False,
+        }, indent=2, sort_keys=True))
+        return 0
     regime = _load_regime_driver()
     verified = verify_baseline(regime)
     verify_current_source_assets(regime)
