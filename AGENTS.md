@@ -184,9 +184,10 @@ validated mesh strain extraction              [DONE]
     ->
 measure available deformation regime          [DONE]
     ->
-Blender-version geometry/strain fidelity       [DONE — PASS]
+Blender-version geometry/strain fidelity      [DONE — PASS]
     ->
-independent material-response calibration      [CURRENT]
+material-response discovery / Stage A         [DONE — CLOSED]
+quantitative calibration / Stage B            [CURRENT]
     ->
 Gate-1 preregistration
     ->
