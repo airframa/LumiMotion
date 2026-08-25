@@ -1,7 +1,7 @@
 # Constitutive Appearance for Dynamic Gaussian Inverse Rendering
 ## Running research direction document
 
-**Status:** Provisional research direction — hypothesis selected, first gate not yet run  
+**Status:** Active research direction — substrate/strain instrumentation validated; deformation regime measured; Blender-version fidelity PASS; material-response calibration and Gate-1 preregistration next
 **Started:** 2026-08-23  
 **Scope:** Dynamic inverse rendering + Gaussian splatting  
 **Primary substrate candidate:** LumiMotion (CVPR 2026 Highlight)  
@@ -225,16 +225,58 @@ We should use copies of them as a controlled sandbox, not treat them as proof of
 
 ### Blender version rule for this drop
 
-The newest read-only survey reports the main files as Blender 3.6.13 files and confirms that portable Blender 3.6.13 opens all 15 cleanly. One hook asset emits a warning referencing Blender 4.4.32, likely due to a linked/appended sub-asset.
+The completed deformation-regime run under Blender 3.6.13 showed that **all four**
+frozen character assets emit:
 
-For this new project:
+```text
+Warning: File written by newer Blender binary (404.32), expect loss of data!
+```
 
-- default to the version validated by the asset survey for these exact files;
-- never mix Blender versions within one quantitative gate;
-- record the exact binary in every render manifest;
-- explicitly set/check Color Management → View Transform for every new pass.
+A preregistered Blender 3.6.13 vs 4.4.0 evaluated-geometry/Path-A fidelity check
+was therefore run before any appearance experiment.
 
-The existing beauty renders use **Standard**; the normal-pass example uses **Raw**. View Transform is a saved GUI property and is not set by the embedded scripts.
+**Result: PASS, with exact equality for the tested geometry/strain quantities.**
+
+Across the frozen four-scene population:
+
+- structural object/topology correspondence matched exactly at all 150 frames per scene;
+- 19,611,966 jointly valid face/frame observations had `d_epsilon = 0` at
+  p50/p95/p99/max in every scene;
+- every raw evaluated-world-vertex diagnostic had max normalized difference 0;
+- all 288 frozen deformation-summary comparisons had absolute difference 0;
+- Blender 4.4.0 reference-identity errors were at most ~`5.2e-12`, far below
+  the frozen `1e-5` gate.
+
+Therefore the earlier 3.6.13 deformation characterization is retained as
+canonical. The 404.32 warning is closed **only for evaluated armature-driven
+geometry/topology and Path-A strain**; it is not evidence of render/shader
+equivalence.
+
+**Pre-result version policy now in force:** future quantitative Blender
+constitutive-appearance experiments use:
+
+```text
+/home/fmb/blender-4.4.0-linux-x64/blender
+Blender 4.4.0
+build hash 05377985c527
+```
+
+for both geometry evaluation and rendering, with experiment-specific integrity
+checks. Never mix Blender versions inside a quantitative gate.
+
+Record the exact binary/build in every manifest and explicitly set/check Color
+Management → View Transform for every new pass.
+
+The existing beauty renders use **Standard**; the normal-pass example uses
+**Raw**. View Transform is a saved GUI property and is not set by the embedded
+scripts.
+
+See:
+
+```text
+docs/constitutive_blender_version_fidelity_prereg.md
+docs/constitutive_blender_version_fidelity_results.md
+```
 
 ### Asset handling
 
@@ -382,6 +424,38 @@ For a selected Joanna scene:
 **Synthetic known-deformation control:** a simple patch stretched by a known factor must recover that factor.
 
 Do not proceed to appearance rendering until these identities pass.
+
+---
+
+### Phase 2 result — COMPLETE
+
+Path-A exact reference-relative mesh strain extraction was validated before author
+asset measurement. The four frozen armature-driven Joanna scenes were then
+characterized over every scheduled frame.
+
+Primary area-weighted deformation tails:
+
+| scene | p95 λmax | p99 λmax | p05 λmin | p01 λmin | area λmax ≥ 1.10 | area λmin ≤ 0.90 |
+|---|---:|---:|---:|---:|---:|---:|
+| `hook` | 1.1524 | 1.3720 | 0.8750 | 0.7728 | 8.16% | 7.12% |
+| `jumpingjacks` | 1.1177 | 1.3161 | 0.8094 | 0.5573 | 6.23% | 10.06% |
+| `mouse` | 1.2015 | 1.5290 | 0.7934 | 0.6263 | 12.31% | 12.19% |
+| `standup` | 1.0404 | 1.1128 | 0.9578 | 0.8992 | 1.24% | 1.02% |
+
+Interpretation:
+
+- the sandbox contains enough localized deformation support to make a later
+  constitutive-appearance signal test meaningful;
+- this does not establish stress-free physical strain or material response;
+- the completed 3.6.13 characterization was subsequently validated exactly
+  against Blender 4.4.0 and is retained.
+
+See:
+
+```text
+docs/constitutive_deformation_regime_results.md
+docs/constitutive_blender_version_fidelity_results.md
+```
 
 ---
 
@@ -636,46 +710,53 @@ Do not confuse “convenient sandbox” with “final benchmark.”
 
 ## 11. Immediate actions
 
-### Action 1 — repository preparation
+### Action 1 — consolidate the validated geometry/strain evidence
 
-In the LumiMotion repo:
+**Done.**
 
-1. create branch `constitutive-appearance`;
-2. copy this document to `docs/CONSTITUTIVE_APPEARANCE_DIRECTION.md`;
-3. create `docs/constitutive_code_audit.md`;
-4. create `scripts_local/constitutive/`;
-5. add a private/gitignored path for Joanna's Blender files;
-6. make no training-code changes yet.
+The Path-A extractor, four-scene deformation characterization, and Blender
+3.6.13↔4.4.0 fidelity check are now closed instrument/substrate results.
 
-### Action 2 — Codex read-only audit
+Do not reopen geometry/version validation without a new concrete inconsistency.
 
-Ask Codex to map the Stage 1/Stage 2 deformation/material pathways and identify the minimal hook for an oracle time-varying roughness field and local deformation-gradient computation.
+### Action 2 — independent material-response calibration
 
-The audit must cite exact `file:line` and must not edit source.
+**Current task.**
 
-### Action 3 — decide the first Blender scene
+Before authoring a synthetic constitutive shader, establish from independent
+material-physics evidence what deformation-dependent reflectance responses are
+plausible over the measured deformation support.
 
-Default candidates:
+This step should determine, before Gate 1:
 
-- `standup150` — large articulated deformation;
-- `jumpingjacks` — broad motion;
-- `spheres_with_rotations` — negative rigid-motion control.
+- material class(es) to target first;
+- which deformation descriptor(s) the physical evidence supports;
+- sign and magnitude/range of the response;
+- whether scalar roughness is defensible for the first gate or whether the
+  evidence is inherently anisotropic;
+- the domain over which interpolation/extrapolation is justified;
+- uncertainty/variation across measurements or materials.
 
-Do not choose based on which produces the prettiest result. Choose based on measurable strain range after the extractor is validated.
+Do not choose the law because it produces a visually strong effect.
 
-### Action 4 — write Gate 1 preregistration
+### Action 3 — write Gate-1 preregistration
 
-Freeze:
+Freeze before full appearance rendering:
 
-- material-response law and its literature-grounded magnitude;
-- deformation-range definition;
-- baseline definition;
-- primary statistic;
-- threshold;
-- predictions;
-- falsifiers.
+- the independently justified strain→BRDF response law/range;
+- which measured deformation states are in-domain;
+- GT constitutive material definition;
+- canonical-fixed and strong best-time-invariant baselines;
+- held-out camera/illumination/deformation splits;
+- primary image statistic and practical-effect threshold;
+- predictions and falsifiers;
+- rigid-motion/zero-strain controls;
+- exact Blender 4.4.0/render/color-management contract.
 
-Only then generate the full Gate 1 renders.
+### Action 4 — only then run the synthetic signal gate
+
+Do not implement Path B, modify LumiMotion training/material parameters, or
+build the learned constitutive model before Gate 1 supports the premise.
 
 ---
 
@@ -703,41 +784,31 @@ If (1)–(7) hold, the project has a credible top-tier method-paper shape.
 
 Proceed.
 
-But proceed in this order:
+Current state:
 
-\[
-\boxed{
-\text{code audit}
-\rightarrow
-\text{exact strain extraction}
-\rightarrow
-\text{synthetic signal gate}
-\rightarrow
-\text{real-material gate}
-\rightarrow
-\text{minimal LumiMotion prototype}
-\rightarrow
-\text{anisotropic final model}
-}
-\]
+```text
+LumiMotion substrate audit                    [DONE]
+strain-interface specification                [DONE]
+controlled Path-A validation                  [DONE]
+Joanna deformation-regime characterization   [DONE]
+Blender 3.6.13 ↔ 4.4.0 fidelity check        [DONE — PASS]
+independent material-response calibration     [CURRENT]
+Gate-1 preregistration
+synthetic signal / observability gate
+real-material existence gate
+minimal LumiMotion prototype
+anisotropic/material-frame extension if justified
+```
 
-The next task is **not training**.
+The geometry/strain side is now sufficiently validated for this stage. The next
+task is **not another deformation experiment and not training**.
 
-The next task is to establish that we can compute the deformation state cleanly and identify exactly where a deformation-conditioned material state would enter LumiMotion.
+The next task is to establish an independently defensible material-response law
+and freeze Gate 1 before rendering any confirmatory appearance result.
 
 ---
 
 ## 14. Living log
-- 2026-08-23 — LumiMotion substrate audit passed conditionally.
-Stage-2 intrinsic albedo and roughness are confirmed time-invariant. Gaussian identity is fixed after the Stage-1 checkpoint is loaded, and canonical/deformed Gaussian centers coexist at the shared render_ir hook. No canonical neighbour graph or intrinsic material frame exists; learned scale deformation is disabled, so strain must be estimated from neighbourhood deformation rather than Gaussian scale. A time-conditioned Stage-1 shadow/radiance pathway can compensate for material error and must be controlled experimentally. Dynamic NVS/relighting evaluation retains the stale first-frame BVH bug. Future oracle roughness must be propagated consistently through both primary rasterization and secondary ray-traced material features. Verdict: feasible with architectural caveats; proceed to strain-interface specification, not method implementation.
-- 2026-08-24 — Path-A mesh strain extraction passed the frozen validation
-contract. Identity and 1.10x uniaxial fixtures were exact; rigid-motion
-errors were <=1.11e-16 and the maximum area-identity residual was 2.22e-16.
-All preregistered degeneracy fixtures were correctly rejected with NaN
-descriptors. The Blender 3.6.13 evaluated-mesh smoke path passed with maximum
-stretch error 2.63e-08. Path A is cleared for controlled asset extraction;
-this does not yet establish topology stability or deformation magnitude in
-Joanna's actual animations.
 
 ### 2026-08-23 — direction selected
 
@@ -749,6 +820,36 @@ Joanna's actual animations.
 - Final novelty target defined around **unseen deformation generalization**, not merely better reconstruction of seen frames.
 
 ---
+
+### 2026-08-25 — deformation support characterized
+
+- Validated Path-A reference-relative mesh strain extraction was applied to all
+  four frozen armature-driven Joanna scenes over all 150 scheduled frames.
+- The primary area-weighted distributions show substantial localized deformation
+  in `hook`, `jumpingjacks`, and `mouse`; `standup` is lower-deformation but usable.
+- Across 19,612,200 expected face/frame observations, 19,611,966 were valid.
+  The only 234 invalid observations were preregistered `target_collapsed` cases
+  in `standup`.
+- Interpretation frozen: the sandbox has enough deformation support to justify a
+  later material-response signal gate; no material-response claim follows from
+  deformation magnitude alone.
+
+### 2026-08-25 — Blender-version fidelity concern closed
+
+- The completed 3.6.13 run emitted the Blender `404.32` newer-binary warning for
+  all four source assets, motivating a preregistered 3.6.13↔4.4.0 instrument check.
+- The first `v1` attempt failed at Blender-worker CLI dispatch before strain
+  extraction and produced no scientific verdict; the bug was fixed and a real
+  Blender-hosted dispatch smoke test added.
+- Canonical `v2` verdict: **PASS**.
+- Across 19,611,966 jointly valid observations, local `d_epsilon` was exactly 0
+  at p50/p95/p99/max for every scene.
+- Raw evaluated-world-vertex differences were exactly 0 for every scene/object.
+- All 288 frozen deformation-summary comparisons had absolute difference 0.
+- The completed 3.6.13 deformation characterization is retained.
+- Future quantitative constitutive Blender work is standardized on Blender 4.4.0
+  (`05377985c527`) for geometry and rendering.
+
 
 ## 15. References / nearest-neighbour watchlist
 

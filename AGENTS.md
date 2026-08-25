@@ -43,6 +43,18 @@ The completed substrate audit is:
 docs/constitutive_code_audit.md
 ```
 
+Current validated instrument/results documents:
+
+```text
+docs/constitutive_strain_interface_spec.md
+docs/constitutive_strain_validation_prereg.md
+docs/constitutive_strain_extractor_validation.md
+docs/constitutive_deformation_regime_prereg.md
+docs/constitutive_deformation_regime_results.md
+docs/constitutive_blender_version_fidelity_prereg.md
+docs/constitutive_blender_version_fidelity_results.md
+```
+
 Historical LumiMotion campaign documents live under:
 
 ```text
@@ -151,26 +163,34 @@ even if the same state occurs at a different time or under a different motion.
 
 ## Current phase
 
-The LumiMotion substrate audit is complete.
+The geometry/strain instrument chain is complete for the current stage.
 
-Audit verdict:
+Verified state:
 
-```text
-feasible with architectural caveats
-```
+- LumiMotion substrate audit: **DONE**;
+- strain-interface specification: **DONE**;
+- controlled Path-A validation: **DONE**;
+- all-four-scene Joanna deformation-regime characterization: **DONE**;
+- Blender 3.6.13 vs 4.4.0 evaluated-geometry/strain fidelity: **DONE — PASS**.
 
 Current project sequence:
 
 ```text
-LumiMotion substrate audit          [DONE]
+LumiMotion substrate audit                    [DONE]
     ->
-strain-interface specification      [DONE]
+strain-interface specification                [DONE]
     ->
-validated mesh strain extraction    [DONE]
+validated mesh strain extraction              [DONE]
     ->
-measure available deformation regime [CURRENT]
+measure available deformation regime          [DONE]
     ->
-pre-registered synthetic signal gate
+Blender-version geometry/strain fidelity       [DONE — PASS]
+    ->
+independent material-response calibration      [CURRENT]
+    ->
+Gate-1 preregistration
+    ->
+synthetic signal / observability gate
     ->
 real-material existence gate
     ->
@@ -179,25 +199,24 @@ minimal LumiMotion prototype
 anisotropic/material-frame extension if justified
 ```
 
-Path A is validated against the frozen numerical and Blender integration gates.
+### Current task boundary
 
-The current task is to pre-register and then measure the available
-reference-relative deformation regime in Joanna's source animations.
+The immediate task is **independent material-response calibration**: establish
+from external material-physics evidence what deformation→reflectance response is
+defensible over the measured deformation regime, then freeze Gate 1.
 
-Do not implement Path B Gaussian-neighbour strain yet.
+Do **not**:
 
-Do not modify LumiMotion training or materials.
+- implement Path B;
+- modify LumiMotion training/material code;
+- implement deformation-conditioned roughness;
+- choose a response law because it makes a strong image effect;
+- run the Gate-1 appearance experiment before its preregistration is frozen;
+- run another geometry/Blender-version experiment without a new concrete
+  inconsistency.
 
-Do not select a strain-to-reflectance law yet.
-
-Do not render or test appearance yet.
-
-Do not implement deformation-conditioned roughness yet.
-
-Do not run the constitutive-appearance signal experiment before its
-pre-registration exists.
-
----
+The deformation-support question and the Blender-version concern are closed for
+this stage.
 
 ## Default operating mode
 
@@ -608,14 +627,8 @@ surface geometry for validating local strain extraction.
 They should **not** be treated as evidence for deformation-dependent reflectance:
 their authored material parameters are essentially deformation-invariant.
 
-Path A strain extraction is now implemented and validated.
-
-Joanna's source assets may be accessed read-only only after the corresponding
-measurement choices have been pre-registered and committed.
-
-Do not modify, save over, re-export, or redistribute the source `.blend` files.
-Do not render appearance or introduce deformation-dependent materials during
-the deformation-regime characterization phase.
+Do not implement a strain extractor, modify these scenes, or generate new renders
+until the relevant step has been designed and approved.
 
 ---
 
@@ -739,33 +752,19 @@ document.
 
 ---
 
-## Current task: deformation-regime characterization
+## Current task: strain-interface specification
 
-Path A reference-relative mesh strain extraction has passed its frozen numerical
-and Blender integration validation gates.
+The substrate audit is complete.
 
-The next research step has two stages:
+The next task is a **specification only**, not implementation.
 
-1. pre-register the deformation-regime characterization;
-2. only after that preregistration is reviewed and committed, measure Joanna's
-   source animations.
+Create:
 
-The purpose of this stage is only to establish the magnitude and spatial
-prevalence of validated reference-relative deformation in the existing
-animations.
+```text
+docs/constitutive_strain_interface_spec.md
+```
 
-Do not:
-
-- implement Path B Gaussian-neighbour strain;
-- choose a strain-to-reflectance law;
-- modify LumiMotion training or material code;
-- render appearance;
-- rank/select scenes or frames after inspecting strain;
-- define a scientific success/failure threshold for deformation magnitude.
-
-The deformation-regime measurement is descriptive. Whether the measured
-deformation is physically large enough to matter for reflectance is intentionally
-deferred until it is combined with independent material-physics evidence.
+The specification must define two compatible deformation-state paths.
 
 ### A. Ground-truth mesh strain
 
