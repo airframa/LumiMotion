@@ -1,0 +1,57 @@
+{
+  "b": {
+    "rigid": 0.0,
+    "seq": 0.0
+  },
+  "bottom_decile_C_rigid_max": 19,
+  "bottom_decile_C_rigid_median": 12.0,
+  "bottom_decile_C_rigid_min": 1,
+  "bottom_decile_boundary": 20.0,
+  "cells": {
+    "rigid": 67500,
+    "seq": 67500
+  },
+  "delta_b": 0.0,
+  "disagreements": {
+    "rigid": 0,
+    "seq": 0
+  },
+  "exposure": {
+    "rigid": {
+      "frag_0.001_pct": 0.03899178387411224,
+      "frag_0.01_pct": 0.3820266443856473,
+      "frag_0.05_pct": 1.7527735227219978,
+      "gated_cells_decile": 215430,
+      "overflow_pct_decile": 58.76928153097418,
+      "overflow_pct_sample": 56.29333333333333,
+      "xing_max": 560,
+      "xing_median": 33.0,
+      "xing_p90": 145.0,
+      "xing_p99": 280.0
+    },
+    "seq": {
+      "frag_0.001_pct": 0.017100531582238898,
+      "frag_0.01_pct": 0.16172217010631645,
+      "frag_0.05_pct": 0.8071450906816761,
+      "gated_cells_decile": 204672,
+      "overflow_pct_decile": 51.2731997030438,
+      "overflow_pct_sample": 48.82962962962963,
+      "xing_max": 673,
+      "xing_median": 21.0,
+      "xing_p90": 119.0,
+      "xing_p99": 252.0
+    }
+  },
+  "n_bottom_decile": 3592,
+  "n_dynamic_pos": 36932,
+  "n_sample": 500,
+  "overflow_saturated": false,
+  "proceed": true,
+  "ratio": 0.0,
+  "reproduces_stage2": {
+    "rigid": 500,
+    "seq": 500
+  },
+  "scene": "standup150_v5_spec32_r2_mlp",
+  "seed": 0
+}
